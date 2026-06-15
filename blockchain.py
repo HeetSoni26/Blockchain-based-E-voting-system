@@ -11,7 +11,17 @@ import random
 import string
 from datetime import datetime
 
-BLOCKCHAIN_FILE = os.path.join(os.path.dirname(__file__), "blockchain.json")
+if os.environ.get("VERCEL"):
+    BLOCKCHAIN_FILE = "/tmp/blockchain.json"
+    orig_blockchain = os.path.join(os.path.dirname(__file__), "blockchain.json")
+    if not os.path.exists(BLOCKCHAIN_FILE) and os.path.exists(orig_blockchain):
+        try:
+            import shutil
+            shutil.copy(orig_blockchain, BLOCKCHAIN_FILE)
+        except Exception as e:
+            print(f"[VERCEL INIT] Failed to copy blockchain.json: {e}")
+else:
+    BLOCKCHAIN_FILE = os.path.join(os.path.dirname(__file__), "blockchain.json")
 
 
 

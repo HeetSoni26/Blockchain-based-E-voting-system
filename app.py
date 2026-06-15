@@ -34,7 +34,17 @@ app.secret_key = os.environ.get("SECRET_KEY", "evoting_secret_2024_blockchain")
 # Email config — update with real SMTP credentials for live demo
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
-SMTP_CONFIG_FILE = os.path.join(os.path.dirname(__file__), "smtp_config.json")
+if os.environ.get("VERCEL"):
+    SMTP_CONFIG_FILE = "/tmp/smtp_config.json"
+    orig_smtp = os.path.join(os.path.dirname(__file__), "smtp_config.json")
+    if not os.path.exists(SMTP_CONFIG_FILE) and os.path.exists(orig_smtp):
+        try:
+            import shutil
+            shutil.copy(orig_smtp, SMTP_CONFIG_FILE)
+        except Exception:
+            pass
+else:
+    SMTP_CONFIG_FILE = os.path.join(os.path.dirname(__file__), "smtp_config.json")
 
 def load_smtp_config():
     """Load dynamic SMTP configuration or fallback to env vars."""
@@ -66,7 +76,17 @@ def save_smtp_config(email, password):
 #  Load user database
 # ------------------------------------------------------------------ #
 
-USERS_FILE = os.path.join(os.path.dirname(__file__), "users.json")
+if os.environ.get("VERCEL"):
+    USERS_FILE = "/tmp/users.json"
+    orig_users = os.path.join(os.path.dirname(__file__), "users.json")
+    if not os.path.exists(USERS_FILE) and os.path.exists(orig_users):
+        try:
+            import shutil
+            shutil.copy(orig_users, USERS_FILE)
+        except Exception:
+            pass
+else:
+    USERS_FILE = os.path.join(os.path.dirname(__file__), "users.json")
 
 
 def load_users() -> list:
