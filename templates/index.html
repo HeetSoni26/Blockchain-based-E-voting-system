@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}BlockVote — Secure Blockchain E-Voting{% endblock %}
+
+{% block extra_css %}
+<style>
+  .hero{
+    text-align:center;padding:4rem 1rem 2rem;
+  }
+  .hero-badge{
+    display:inline-flex;align-items:center;gap:.5rem;
+    background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.25);
+    color:var(--accent);padding:.3rem 1rem;border-radius:20px;
+    font-family:'Share Tech Mono',monospace;font-size:.8rem;
+    margin-bottom:1.5rem;letter-spacing:1px;
+  }
+  .hero h1{
+    font-family:'Rajdhani',sans-serif;font-size:3.5rem;
+    font-weight:700;line-height:1.1;margin-bottom:1rem;
+    background:linear-gradient(135deg,#fff 30%,var(--accent) 100%);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .hero p{color:var(--text2);font-size:1.05rem;max-width:560px;margin:0 auto 2.5rem}
+
+  .stats-row{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;
+    max-width:900px;margin:0 auto 3.5rem;
+  }
+  .stat-card{
+    background:var(--bg3);border:1px solid var(--border);
+    border-radius:12px;padding:1.2rem 1rem;text-align:center;
+    transition:all .3s;
+  }
+  .stat-card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:var(--glow)}
+  .stat-num{
+    font-family:'Rajdhani',sans-serif;font-size:2.2rem;font-weight:700;
+    color:var(--accent);line-height:1;
+  }
+  .stat-label{color:var(--text2);font-size:.8rem;margin-top:.3rem;letter-spacing:.5px}
+
+  .action-grid{
+    display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem;
+    max-width:900px;margin:0 auto 3rem;
+  }
+  .action-card{
+    background:var(--bg3);border:1px solid var(--border);
+    border-radius:16px;padding:2rem;
+    cursor:pointer;text-decoration:none;
+    display:flex;flex-direction:column;
+    transition:all .3s;position:relative;overflow:hidden;
+  }
+  .action-card::before{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(135deg, transparent 60%, rgba(0,212,255,.05));
+    opacity:0;transition:opacity .3s;
+  }
+  .action-card:hover::before{opacity:1}
+  .action-card:hover{border-color:var(--accent);transform:translateY(-4px);box-shadow:var(--glow)}
+  .action-card.green:hover{border-color:var(--accent2);box-shadow:var(--glow2)}
+  .action-card.green:hover::before{background:linear-gradient(135deg,transparent 60%,rgba(0,255,136,.05))}
+  .action-card.orange:hover{border-color:var(--accent3);box-shadow:0 0 20px rgba(255,107,53,.25)}
+
+  .card-icon{
+    width:52px;height:52px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.5rem;margin-bottom:1.2rem;
+    background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);
+  }
+  .card-icon.green{background:rgba(0,255,136,.1);border-color:rgba(0,255,136,.2)}
+  .card-icon.orange{background:rgba(255,107,53,.1);border-color:rgba(255,107,53,.2)}
+  .card-icon.purple{background:rgba(160,80,255,.1);border-color:rgba(160,80,255,.2)}
+
+  .action-card h3{
+    font-family:'Rajdhani',sans-serif;font-size:1.35rem;font-weight:700;
+    color:#fff;margin-bottom:.4rem;
+  }
+  .action-card p{color:var(--text2);font-size:.88rem;line-height:1.5;flex:1}
+  .card-arrow{
+    display:inline-flex;align-items:center;gap:.4rem;
+    color:var(--accent);font-family:'Rajdhani',sans-serif;
+    font-weight:700;font-size:.9rem;margin-top:1.2rem;
+  }
+
+  .info-row{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;
+    max-width:900px;margin:0 auto 3rem;
+  }
+  .info-item{
+    background:rgba(13,21,48,.5);border:1px solid var(--border);
+    border-radius:10px;padding:1rem 1.2rem;
+    display:flex;align-items:flex-start;gap:.8rem;
+  }
+  .info-dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--accent2);flex-shrink:0;margin-top:5px;
+    box-shadow:0 0 6px var(--accent2);
+  }
+  .info-item strong{
+    display:block;font-family:'Rajdhani',sans-serif;font-size:.95rem;
+    color:#fff;margin-bottom:.2rem;
+  }
+  .info-item span{color:var(--text2);font-size:.82rem;line-height:1.4}
+
+  @media(max-width:700px){
+    .stats-row,.action-grid,.info-row{grid-template-columns:1fr}
+    .hero h1{font-size:2.2rem}
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero">
+  <div class="hero-badge">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5L12 1z"/>
+    </svg>
+    SECURED BY SHA-256 BLOCKCHAIN
+  </div>
+  <h1>Blockchain E-Voting<br/>System</h1>
+  <p>A tamper-proof, transparent, and secure digital voting platform powered by custom blockchain technology with Aadhaar-based authentication.</p>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-num">{{ stats.total_votes }}</div>
+    <div class="stat-label">TOTAL VOTES CAST</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num">{{ stats.blocks }}</div>
+    <div class="stat-label">BLOCKS IN CHAIN</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num">{{ stats.pending }}</div>
+    <div class="stat-label">PENDING TXNS</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num" style="color:{% if stats.is_valid %}var(--accent2){% else %}var(--accent3){% endif %}">
+      {% if stats.is_valid %}✓{% else %}✗{% endif %}
+    </div>
+    <div class="stat-label">CHAIN INTEGRITY</div>
+  </div>
+</div>
+
+<!-- Action Cards -->
+<div class="action-grid">
+  <a href="/verify" class="action-card">
+    <div class="card-icon">🗳️</div>
+    <h3>Start Voting</h3>
+    <p>Authenticate with your Aadhaar number, verify your identity via OTP, and cast your vote securely on the blockchain.</p>
+    <div class="card-arrow">Begin Process →</div>
+  </a>
+
+  <a href="/results" class="action-card green">
+    <div class="card-icon green">📊</div>
+    <h3>View Vote Count</h3>
+    <p>See real-time election results with party-wise vote distribution pulled directly from the blockchain ledger.</p>
+    <div class="card-arrow" style="color:var(--accent2)">View Results →</div>
+  </a>
+
+  <a href="/mining" class="action-card orange">
+    <div class="card-icon orange">⛏️</div>
+    <h3>Mine Blocks</h3>
+    <p>Seal pending vote transactions into a new block using Proof-of-Work mining with SHA-256 hashing.</p>
+    <div class="card-arrow" style="color:var(--accent3)">Start Mining →</div>
+  </a>
+
+  <a href="/blockchain_view" class="action-card" style="">
+    <div class="card-icon purple">🔗</div>
+    <h3>View Blockchain</h3>
+    <p>Explore the complete chain of blocks, inspect hashes, Merkle roots, nonces, and transaction data.</p>
+    <div class="card-arrow">Explore Chain →</div>
+  </a>
+</div>
+
+<!-- Info Row -->
+<div class="info-row">
+  <div class="info-item">
+    <div class="info-dot"></div>
+    <div>
+      <strong>Aadhaar Authentication</strong>
+      <span>10-user Aadhaar database with OTP email verification before voting.</span>
+    </div>
+  </div>
+  <div class="info-item">
+    <div class="info-dot" style="background:var(--accent);box-shadow:0 0 6px var(--accent)"></div>
+    <div>
+      <strong>Private Key Signing</strong>
+      <span>Each vote is cryptographically signed with a personal private key.</span>
+    </div>
+  </div>
+  <div class="info-item">
+    <div class="info-dot" style="background:var(--accent3);box-shadow:0 0 6px var(--accent3)"></div>
+    <div>
+      <strong>Immutable Ledger</strong>
+      <span>Votes sealed in blocks via Proof-of-Work cannot be altered.</span>
+    </div>
+  </div>
+</div>
+
+<div style="max-width:900px;margin:0 auto 3rem;text-align:center">
+  <p style="color:var(--text2);font-size:.82rem;border-top:1px solid var(--border);padding-top:1.5rem">
+    ⚠️ This system is a <strong>simulation for educational purposes only</strong> — not for real elections.
+  </p>
+</div>
+{% endblock %}

@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block title %}Cast Your Vote — BlockVote{% endblock %}
+
+{% block extra_css %}
+<style>
+  .vote-wrap{max-width:700px;margin:0 auto}
+
+  .already-voted{
+    text-align:center;padding:4rem 2rem;
+  }
+  .already-voted .big-icon{font-size:4rem;margin-bottom:1rem}
+  .already-voted h2{font-family:'Rajdhani',sans-serif;font-size:2rem;color:var(--accent2)}
+  .already-voted p{color:var(--text2);margin-top:.5rem}
+
+  /* ---- Party Cards ---- */
+  .party-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+    gap:1rem;margin:1.5rem 0;
+  }
+  .party-card{
+    background:var(--bg3);border:2px solid var(--border);
+    border-radius:12px;padding:1.4rem 1rem;text-align:center;
+    cursor:pointer;transition:all .2s;position:relative;
+    user-select:none;
+  }
+  .party-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .party-card.selected{
+    border-color:var(--accent2);
+    background:rgba(0,255,136,.08);
+    box-shadow:0 0 20px rgba(0,255,136,.2);
+  }
+  .party-card input{position:absolute;opacity:0;pointer-events:none}
+  .party-icon{font-size:2.2rem;margin-bottom:.6rem}
+  .party-name{
+    font-family:'Rajdhani',sans-serif;font-size:1.05rem;font-weight:700;
+    color:#fff;margin-bottom:.25rem;
+  }
+  .party-abbr{font-size:.8rem;color:var(--text2)}
+  .party-check{
+    position:absolute;top:.6rem;right:.6rem;
+    width:20px;height:20px;border-radius:50%;
+    background:var(--accent2);
+    display:none;align-items:center;justify-content:center;
+    font-size:.7rem;color:#000;font-weight:bold;
+  }
+  .party-card.selected .party-check{display:flex}
+
+  /* ---- Private key input ---- */
+  .key-section{
+    background:var(--bg3);border:1px solid var(--border);
+    border-radius:12px;padding:1.5rem;margin:1.5rem 0;
+  }
+  .key-section h4{
+    font-family:'Rajdhani',sans-serif;font-size:1.1rem;
+    color:#fff;margin-bottom:.4rem;
+  }
+  .key-section p{color:var(--text2);font-size:.88rem;margin-bottom:1rem}
+  .key-input{
+    font-family:'Share Tech Mono',monospace;
+    font-size:1rem;letter-spacing:2px;text-transform:uppercase;
+  }
+
+  /* ---- Result card ---- */
+  .vote-result{
+    display:none;
+    background:linear-gradient(135deg,rgba(0,255,136,.05),rgba(0,212,255,.05));
+    border:1px solid var(--accent2);border-radius:16px;
+    padding:2rem;margin:2rem 0;
+  }
+  .vote-result.show{display:block;animation:fadeInUp .5s ease}
+  @keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+  .vote-result h3{
+    font-family:'Rajdhani',sans-serif;font-size:1.4rem;
+    color:var(--accent2);margin-bottom:1.2rem;
+    display:flex;align-items:center;gap:.5rem;
+  }
+  .result-row{
+    display:flex;flex-direction:column;margin-bottom:1rem;
+    padding:.8rem 1rem;background:var(--bg2);border-radius:8px;
+  }
+  .result-row label{
+    font-size:.75rem;color:var(--text2);letter-spacing:.5px;
+    text-transform:uppercase;margin-bottom:.3rem;
+    font-family:'Rajdhani',sans-serif;
+  }
+  .result-row .val{font-family:'Share Tech Mono',monospace;font-size:.82rem;color:var(--accent);word-break:break-all}
+  .status-badge{
+    margin-top:1rem;padding:.8rem 1.2rem;
+    background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);
+    border-radius:8px;color:var(--accent2);
+    font-family:'Rajdhani',sans-serif;font-size:1rem;font-weight:600;
+    display:flex;align-items:center;gap:.6rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>Cast Your <span>Vote</span></h1>
+    <p>Select a party and confirm with your private key</p>
+  </div>
+
+  <div class="vote-wrap">
+
+    {% if already_voted %}
+    <!-- Already voted -->
+    <div class="already-voted">
+      <div class="big-icon">🛡️</div>
+      <h2>You Have Already Voted</h2>
+      <p>Your Aadhaar ({{ user.aadhaar if user else '' }}) has already cast a vote in this election.</p>
+      <a href="/results" class="btn btn-primary" style="margin-top:1.5rem">View Results</a>
+    </div>
+
+    {% else %}
+    <!-- Steps indicator -->
+    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1.5rem">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:.82rem;color:var(--accent2)">
+        👤 Voter: {{ user.name if user else 'Unknown' }}
+      </div>
+    </div>
+
+    <!-- Party Selection -->
+    <h3 style="font-family:'Rajdhani',sans-serif;color:var(--text2);font-size:.9rem;letter-spacing:1px;margin-bottom:.5rem">
+      SELECT YOUR PARTY
+    </h3>
+
+    <div class="party-grid" id="partyGrid">
+      <div class="party-card" onclick="selectParty(this,'BJP')">
+        <input type="radio" name="party" value="BJP"/>
+        <div class="party-check">✓</div>
+        <div class="party-icon">🪷</div>
+        <div class="party-name">BJP</div>
+        <div class="party-abbr">Bharatiya Janata Party</div>
+      </div>
+      <div class="party-card" onclick="selectParty(this,'Congress')">
+        <input type="radio" name="party" value="Congress"/>
+        <div class="party-check">✓</div>
+        <div class="party-icon">✋</div>
+        <div class="party-name">Congress</div>
+        <div class="party-abbr">Indian National Congress</div>
+      </div>
+      <div class="party-card" onclick="selectParty(this,'AAP')">
+        <input type="radio" name="party" value="AAP"/>
+        <div class="party-check">✓</div>
+        <div class="party-icon">🧹</div>
+        <div class="party-name">AAP</div>
+        <div class="party-abbr">Aam Aadmi Party</div>
+      </div>
+      <div class="party-card" onclick="selectParty(this,'NOTA')">
+        <input type="radio" name="party" value="NOTA"/>
+        <div class="party-check">✓</div>
+        <div class="party-icon">✖️</div>
+        <div class="party-name">NOTA</div>
+        <div class="party-abbr">None of the Above</div>
+      </div>
+      <div class="party-card" onclick="selectParty(this,'Independent')">
+        <input type="radio" name="party" value="Independent"/>
+        <div class="party-check">✓</div>
+        <div class="party-icon">🏛️</div>
+        <div class="party-name">Independent</div>
+        <div class="party-abbr">Independent Candidate</div>
+      </div>
+    </div>
+
+    <!-- Private Key -->
+    <div class="key-section">
+      <h4>🔑 Enter Private Key</h4>
+      <p>Enter the private key that was sent to your registered email address.</p>
+      <input type="text" id="privateKey" class="form-control key-input"
+        placeholder="ENTER PRIVATE KEY" autocomplete="off"
+        oninput="this.value=this.value.toUpperCase()"/>
+    </div>
+
+    <button class="btn btn-success" style="width:100%;font-size:1.1rem;padding:.8rem"
+      id="confirmBtn" onclick="confirmVote()">
+      ✅ Confirm Vote
+    </button>
+
+    <!-- Result Display -->
+    <div class="vote-result" id="voteResult">
+      <h3>🎉 Vote Cast Successfully</h3>
+      <div class="result-row">
+        <label>Your Ballot Hash</label>
+        <div class="val" id="res-ballot"></div>
+      </div>
+      <div class="result-row">
+        <label>Generated Signature</label>
+        <div class="val" id="res-sig"></div>
+      </div>
+      <div class="status-badge">
+        ✅ Your vote is verified and ballot is signed successfully.
+      </div>
+      <div style="margin-top:1.2rem;display:flex;gap:.7rem;flex-wrap:wrap">
+        <a href="/results" class="btn btn-primary">View Results</a>
+        <a href="/mining" class="btn btn-outline">Mine Blocks ⛏️</a>
+      </div>
+    </div>
+
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  let selectedParty = null;
+
+  function selectParty(card, party){
+    document.querySelectorAll('.party-card').forEach(c=>c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedParty = party;
+  }
+
+  async function confirmVote(){
+    if(!selectedParty){ alert('Please select a party.'); return; }
+    const key = document.getElementById('privateKey').value.trim();
+    if(!key){ alert('Please enter your private key.'); return; }
+
+    const btn = document.getElementById('confirmBtn');
+    btn.disabled = true;
+    btn.textContent = '⛓️ Processing on Blockchain...';
+
+    const r = await fetch('/api/cast_vote',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({party: selectedParty, private_key: key})
+    });
+    const d = await r.json();
+    btn.disabled = false;
+    btn.textContent = '✅ Confirm Vote';
+
+    if(d.success){
+      document.getElementById('res-ballot').textContent = d.ballot_hash;
+      document.getElementById('res-sig').textContent = d.signature;
+      document.getElementById('voteResult').classList.add('show');
+      document.getElementById('partyGrid').style.pointerEvents='none';
+      document.getElementById('partyGrid').style.opacity='.5';
+      btn.style.display='none';
+    } else {
+      alert('❌ ' + d.message);
+    }
+  }
+</script>
+{% endblock %}

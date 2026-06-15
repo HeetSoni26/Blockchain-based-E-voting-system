@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% block title %}Mine Blocks — BlockVote{% endblock %}
+
+{% block extra_css %}
+<style>
+  .mining-wrap{max-width:700px;margin:0 auto}
+
+  .pending-banner{
+    padding:1.2rem 1.5rem;border-radius:12px;margin-bottom:2rem;
+    display:flex;align-items:center;gap:1rem;
+    background:rgba(255,204,0,.07);border:1px solid rgba(255,204,0,.25);
+  }
+  .pending-badge{
+    font-family:'Rajdhani',sans-serif;font-size:2rem;font-weight:700;
+    color:var(--warn);min-width:40px;
+  }
+  .pending-text p{color:var(--warn);font-weight:600;font-size:.95rem}
+  .pending-text span{color:var(--text2);font-size:.85rem}
+
+  /* ---- Mining animation ---- */
+  .mine-anim{
+    display:none;padding:2.5rem;text-align:center;
+    background:var(--bg3);border:1px solid var(--border);border-radius:16px;
+    margin:1.5rem 0;
+  }
+  .mine-anim.show{display:block}
+
+  .hash-wheel{
+    width:120px;height:120px;margin:0 auto 1.5rem;
+    border-radius:50%;border:3px solid var(--border);
+    border-top:3px solid var(--accent);
+    border-right:3px solid var(--accent2);
+    animation:spin 1s linear infinite;
+    position:relative;
+  }
+  .hash-wheel::after{
+    content:'⛏️';position:absolute;inset:0;
+    display:flex;align-items:center;justify-content:center;
+    font-size:2rem;animation:spin 1s linear infinite reverse;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .mining-label{
+    font-family:'Rajdhani',sans-serif;font-size:1.3rem;color:#fff;
+    margin-bottom:.5rem;
+  }
+  .hash-stream{
+    font-family:'Share Tech Mono',monospace;font-size:.72rem;
+    color:var(--accent);word-break:break-all;line-height:1.6;
+    max-height:80px;overflow:hidden;
+    animation:scroll-text 0.1s linear infinite;
+    opacity:.7;
+  }
+  @keyframes scroll-text{
+    from{transform:translateY(0)} to{transform:translateY(-2px)}
+  }
+
+  .nonce-counter{
+    font-family:'Share Tech Mono',monospace;font-size:.9rem;
+    color:var(--accent3);margin-top:.7rem;
+  }
+
+  /* ---- Result card ---- */
+  .mine-result{
+    display:none;animation:fadeInUp .5s ease;
+    background:linear-gradient(135deg,rgba(0,255,136,.05),rgba(0,212,255,.05));
+    border:1px solid var(--accent2);border-radius:16px;padding:2rem;
+    margin:1.5rem 0;
+  }
+  .mine-result.show{display:block}
+  @keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+  .mine-result h3{
+    font-family:'Rajdhani',sans-serif;font-size:1.5rem;color:var(--accent2);
+    margin-bottom:1.5rem;display:flex;align-items:center;gap:.5rem;
+  }
+  .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+  .r-item{
+    background:var(--bg2);border-radius:8px;padding:.8rem 1rem;
+    border:1px solid var(--border);
+  }
+  .r-item label{
+    font-size:.72rem;color:var(--text2);letter-spacing:.5px;
+    text-transform:uppercase;font-family:'Rajdhani',sans-serif;
+    display:block;margin-bottom:.3rem;
+  }
+  .r-item .val{
+    font-family:'Share Tech Mono',monospace;font-size:.82rem;
+    color:var(--accent);word-break:break-all;
+  }
+  .r-item .val.big{font-size:1.3rem;color:var(--accent2)}
+  .r-item.full{grid-column:1/-1}
+
+  .no-pending{
+    text-align:center;padding:3rem;
+    background:var(--bg3);border:1px solid var(--border);
+    border-radius:16px;
+  }
+  .no-pending .icon{font-size:3rem;margin-bottom:1rem}
+  .no-pending h3{font-family:'Rajdhani',sans-serif;font-size:1.5rem;color:var(--text2)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>Block <span>Mining</span></h1>
+    <p>Seal pending vote transactions into the blockchain</p>
+  </div>
+
+  <div class="mining-wrap">
+    {% if pending_count > 0 %}
+    <div class="pending-banner">
+      <div class="pending-badge">{{ pending_count }}</div>
+      <div class="pending-text">
+        <p>{{ pending_count }} vote transaction{{ 's' if pending_count != 1 else '' }} waiting to be sealed</p>
+        <span>Mining will include all pending transactions in a new block</span>
+      </div>
+    </div>
+
+    <div style="text-align:center">
+      <button class="btn btn-primary" id="mineBtn" onclick="startMining()"
+        style="font-size:1.2rem;padding:1rem 3rem">
+        ⛏️ Start Mining
+      </button>
+    </div>
+
+    {% else %}
+    <div class="no-pending">
+      <div class="icon">✅</div>
+      <h3>No Pending Transactions</h3>
+      <p style="color:var(--text2);margin-top:.5rem">All transactions have been mined into blocks.</p>
+      <a href="/vote" class="btn btn-primary" style="margin-top:1.5rem">Cast a Vote First</a>
+    </div>
+    {% endif %}
+
+    <!-- Mining animation -->
+    <div class="mine-anim" id="mineAnim">
+      <div class="hash-wheel"></div>
+      <div class="mining-label">⛓️ Mining in Progress...</div>
+      <p style="color:var(--text2);font-size:.88rem;margin-bottom:.8rem">
+        Proof-of-Work: finding hash with 4 leading zeros
+      </p>
+      <div class="hash-stream" id="hashStream">Computing SHA-256 hashes...</div>
+      <div class="nonce-counter">Nonce: <span id="nonceCounter">0</span></div>
+    </div>
+
+    <!-- Mining result -->
+    <div class="mine-result" id="mineResult">
+      <h3>🎉 Block Mined Successfully!</h3>
+      <div class="result-grid">
+        <div class="r-item">
+          <label>Block ID</label>
+          <div class="val big" id="r-blockid">—</div>
+        </div>
+        <div class="r-item">
+          <label>Nonce</label>
+          <div class="val big" id="r-nonce">—</div>
+        </div>
+        <div class="r-item full">
+          <label>Previous Hash</label>
+          <div class="val" id="r-prevhash">—</div>
+        </div>
+        <div class="r-item full">
+          <label>Merkle Root Hash</label>
+          <div class="val" id="r-merkle">—</div>
+        </div>
+        <div class="r-item full">
+          <label>Block Hash</label>
+          <div class="val" style="color:var(--accent2)" id="r-blockhash">—</div>
+        </div>
+        <div class="r-item">
+          <label>Time Taken</label>
+          <div class="val big" id="r-time">—</div>
+        </div>
+        <div class="r-item">
+          <label>Difficulty</label>
+          <div class="val big">4 zeros</div>
+        </div>
+      </div>
+      <div style="margin-top:1.2rem;display:flex;gap:.7rem;flex-wrap:wrap">
+        <a href="/blockchain_view" class="btn btn-primary">View Blockchain</a>
+        <a href="/results" class="btn btn-outline">View Results</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const fakeHashes = [
+    '3a7f29...00002b4c',
+    'ff8a12...000108de',
+    'b34d90...0000009a',
+    '12ac45...00003f7e',
+    '9e2b11...0000a234',
+    '47cd88...00000012',
+  ];
+
+  let nonceInterval, hashInterval;
+
+  function startMining(){
+    document.getElementById('mineBtn').disabled = true;
+    document.getElementById('mineBtn').textContent = '⏳ Mining...';
+    document.getElementById('mineAnim').classList.add('show');
+
+    // Animate nonce counter
+    let n = 0;
+    nonceInterval = setInterval(()=>{
+      n += Math.floor(Math.random()*500+100);
+      document.getElementById('nonceCounter').textContent = n.toLocaleString();
+    }, 80);
+
+    // Animate hash stream
+    let hi = 0;
+    hashInterval = setInterval(()=>{
+      const chars = '0123456789abcdef';
+      const hash = Array.from({length:64},()=>chars[Math.floor(Math.random()*16)]).join('');
+      document.getElementById('hashStream').textContent = hash;
+      hi++;
+    }, 50);
+
+    // Actually mine via API
+    setTimeout(async()=>{
+      const r = await fetch('/api/mine',{method:'POST'});
+      const d = await r.json();
+
+      clearInterval(nonceInterval);
+      clearInterval(hashInterval);
+      document.getElementById('mineAnim').classList.remove('show');
+
+      if(d.success){
+        document.getElementById('r-blockid').textContent = '#' + d.block_id;
+        document.getElementById('r-nonce').textContent = d.nonce.toLocaleString();
+        document.getElementById('r-prevhash').textContent = d.previous_hash;
+        document.getElementById('r-merkle').textContent = d.merkle_root;
+        document.getElementById('r-blockhash').textContent = d.block_hash;
+        document.getElementById('r-time').textContent = d.time_taken + 's';
+        document.getElementById('mineResult').classList.add('show');
+        showModal('Block Mined! ⛏️', `Block #${d.block_id} successfully added to the blockchain with nonce ${d.nonce}.`);
+      } else {
+        alert('Mining failed: ' + d.message);
+        document.getElementById('mineBtn').disabled = false;
+        document.getElementById('mineBtn').textContent = '⛏️ Start Mining';
+      }
+    }, 3500);
+  }
+</script>
+{% endblock %}

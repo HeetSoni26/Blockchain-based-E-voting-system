@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — BlockVote{% endblock %}
+
+{% block extra_css %}
+<style>
+  .admin-grid-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+  
+  .panel-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.8rem;
+    margin-bottom: 1.5rem;
+    transition: border-color 0.3s;
+  }
+  .panel-card:hover {
+    border-color: rgba(0, 212, 255, 0.2);
+  }
+  .panel-card h3 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  
+  /* Stats Strip */
+  .stats-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .stat-mini {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-mini .num {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat-mini .label {
+    font-size: 0.75rem;
+    color: var(--text2);
+    margin-top: 0.2rem;
+  }
+
+  /* Voter Table */
+  .voter-list-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.5rem;
+  }
+  .voter-list-table th, .voter-list-table td {
+    padding: 0.65rem 0.9rem;
+    text-align: left;
+    font-size: 0.82rem;
+    border-bottom: 1px solid rgba(26, 48, 80, 0.4);
+  }
+  .voter-list-table th {
+    font-family: 'Rajdhani', sans-serif;
+    color: var(--text2);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: rgba(8, 13, 30, 0.4);
+  }
+  .voter-list-table td {
+    color: var(--text);
+  }
+  .voter-list-table tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  
+  .voted-badge {
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-family: 'Rajdhani', sans-serif;
+  }
+  .voted-yes {
+    background: rgba(0, 255, 136, 0.1);
+    color: var(--accent2);
+    border: 1px solid rgba(0, 255, 136, 0.3);
+  }
+  .voted-no {
+    background: rgba(255, 51, 85, 0.1);
+    color: var(--accent3);
+    border: 1px solid rgba(255, 51, 85, 0.3);
+  }
+
+  /* SMTP Settings Card */
+  .smtp-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+  .smtp-info-box {
+    padding: 0.8rem;
+    background: rgba(255, 204, 0, 0.05);
+    border: 1px solid rgba(255, 204, 0, 0.18);
+    border-radius: 8px;
+    font-size: 0.75rem;
+    color: var(--warn);
+    line-height: 1.4;
+  }
+
+  /* Tamper Section */
+  .tamper-tool {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.2rem;
+  }
+  
+  .tamper-status-active {
+    border-color: rgba(255, 51, 85, 0.4);
+    box-shadow: 0 0 15px rgba(255, 51, 85, 0.1);
+  }
+  
+  @media(max-width: 900px) {
+    .admin-grid-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>Administrative <span>Control Center</span></h1>
+    <p>Simulate security attacks, configure live SMTP e-mails, and manage election data</p>
+  </div>
+  
+  <div class="admin-grid-layout">
+    <!-- Left Column: Voter records and security logs -->
+    <div>
+      <!-- Stats Summary -->
+      <div class="stats-strip">
+        <div class="stat-mini">
+          <div class="num">{{ total_voters }}</div>
+          <div class="label">REGISTERED VOTERS</div>
+        </div>
+        <div class="stat-mini">
+          <div class="num">{{ voted_count }}</div>
+          <div class="label">VOTES CAST</div>
+        </div>
+        <div class="stat-mini">
+          <div class="num" style="color:var(--accent2)">
+            {{ ((voted_count / total_voters) * 100)|round(1) if total_voters > 0 else 0 }}%
+          </div>
+          <div class="label">VOTER TURNOUT</div>
+        </div>
+      </div>
+      
+      <!-- Voter Database Panel -->
+      <div class="panel-card">
+        <h3>📋 Voter Registration Ledger</h3>
+        <p style="color:var(--text2);font-size:0.85rem;margin-bottom:1rem">
+          List of the 10 demo Aadhaar numbers with current voting statuses.
+        </p>
+        <div style="overflow-x:auto">
+          <table class="voter-list-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Aadhaar Number</th>
+                <th>Region</th>
+                <th>Email ID</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for user in users %}
+              <tr>
+                <td style="font-weight:600">{{ user.name }}</td>
+                <td style="font-family:'Share Tech Mono',monospace">{{ user.aadhaar }}</td>
+                <td>{{ user.region }}</td>
+                <td style="color:var(--text2)">{{ user.email }}</td>
+                <td>
+                  {% if user.voted %}
+                  <span class="voted-badge voted-yes">VOTED</span>
+                  {% else %}
+                  <span class="voted-badge voted-no">NOT VOTED</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- Global Controls -->
+      <div class="panel-card" style="border-color:rgba(255,51,85,0.2)">
+        <h3 style="color:var(--accent3)">⚙️ Emergency System Controls</h3>
+        <p style="color:var(--text2);font-size:0.85rem;margin-bottom:1.2rem">
+          Wipe the blockchain file (`blockchain.json`) and reset all voter statuses to `NOT VOTED` for testing.
+        </p>
+        <button class="btn btn-danger" onclick="confirmResetSystem()">
+          🚨 Reset E-Voting System
+        </button>
+      </div>
+    </div>
+    
+    <div>
+      <!-- Attack / Tamper Simulator -->
+      <div class="panel-card" style="border-color:rgba(255,204,0,0.3)">
+        <h3 style="color:var(--warn)">⚡ Cyber-Security Attack Simulator</h3>
+        <p style="color:var(--text2);font-size:0.82rem;margin-bottom:0.8rem">
+          Demonstrate block immutability. Tamper with a vote transaction inside a mined block and observe validation breakdown.
+        </p>
+        
+        {% if mineable_blocks %}
+        <div class="form-group" style="margin-bottom:0.6rem">
+          <label>SELECT MINED BLOCK</label>
+          <select id="tamperBlockSelect" class="form-control" onchange="loadBlockTransactions()">
+            <option value="">-- Select Block --</option>
+            {% for block in mineable_blocks %}
+            <option value="{{ block.index }}">Block #{{ block.index }} ({{ block.transactions|length }} Txns)</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div id="tamperFormSection" style="display:none" class="tamper-tool">
+          <div class="form-group" style="margin-bottom:0.5rem">
+            <label>SELECT VOTE TRANSACTION</label>
+            <select id="tamperTxSelect" class="form-control" onchange="showTxDetails()">
+              <!-- Filled dynamically by JS -->
+            </select>
+          </div>
+          
+          <div id="txInfoPane" style="display:none;font-size:0.78rem;color:var(--text2);margin-bottom:0.5rem">
+            <p><strong>Aadhaar Hash:</strong> <span id="txAadhaar" class="hash" style="padding:0.1rem 0.3rem"></span></p>
+            <p style="margin-top:0.4rem"><strong>Ballot Hash:</strong> <span id="txBallot" class="hash" style="padding:0.1rem 0.3rem"></span></p>
+          </div>
+          
+          <div class="form-group" style="margin-bottom:0.8rem">
+            <label>ALTER PARTY SELECTION</label>
+            <select id="alterPartySelect" class="form-control">
+              <option value="BJP">BJP 🪷</option>
+              <option value="Congress">Congress ✋</option>
+              <option value="AAP">AAP 🧹</option>
+              <option value="NOTA">NOTA ✖️</option>
+              <option value="Independent">Independent Candidate 🏛️</option>
+            </select>
+          </div>
+          
+          <button class="btn btn-danger" style="width:100%" onclick="executeTamperAttack()">
+            💥 Tamper Block Ledger!
+          </button>
+        </div>
+        
+        {% else %}
+        <div style="padding:1rem;background:rgba(255,255,255,0.03);border:1px dashed var(--border);border-radius:8px;text-align:center;font-size:0.82rem;color:var(--text2)">
+          ⚠️ No mined blocks containing votes found. Please cast a vote and **mine the block** first to enable security attack simulations.
+        </div>
+        {% endif %}
+        
+        <div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">
+          <button class="btn btn-success" style="width:100%" onclick="restoreLedger()">
+            🛡️ Restore Ledger Integrity
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Dynamic lists from backend
+  const blocksData = {};
+  {% for block in mineable_blocks %}
+    blocksData[{{ block.index }}] = {{ block.transactions|tojson }};
+  {% endfor %}
+  
+  function loadBlockTransactions() {
+    const blockIndex = document.getElementById('tamperBlockSelect').value;
+    const txSelect = document.getElementById('tamperTxSelect');
+    const formSection = document.getElementById('tamperFormSection');
+    
+    if(!blockIndex) {
+      formSection.style.display = 'none';
+      return;
+    }
+    
+    txSelect.innerHTML = '<option value="">-- Select Transaction --</option>';
+    const transactions = blocksData[blockIndex];
+    transactions.forEach((tx, idx) => {
+      txSelect.innerHTML += `<option value="${idx}">Tx #${idx} (Vote: ${tx.party})</option>`;
+    });
+    
+    formSection.style.display = 'block';
+    document.getElementById('txInfoPane').style.display = 'none';
+  }
+  
+  function showTxDetails() {
+    const blockIndex = document.getElementById('tamperBlockSelect').value;
+    const txIndex = document.getElementById('tamperTxSelect').value;
+    const pane = document.getElementById('txInfoPane');
+    
+    if(!txIndex) {
+      pane.style.display = 'none';
+      return;
+    }
+    
+    const tx = blocksData[blockIndex][txIndex];
+    document.getElementById('txAadhaar').textContent = tx.aadhaar_hash.substring(0, 20) + '...';
+    document.getElementById('txBallot').textContent = tx.ballot_hash.substring(0, 20) + '...';
+    document.getElementById('alterPartySelect').value = tx.party;
+    
+    pane.style.display = 'block';
+  }
+  
+  async function executeTamperAttack() {
+    const blockIndex = document.getElementById('tamperBlockSelect').value;
+    const txIndex = document.getElementById('tamperTxSelect').value;
+    const alterParty = document.getElementById('alterPartySelect').value;
+    
+    if(!blockIndex || !txIndex) {
+      alert('Please select a block and transaction to tamper.');
+      return;
+    }
+    
+    const r = await fetch('/api/tamper_block', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        block_index: blockIndex,
+        tx_index: txIndex,
+        new_party: alterParty
+      })
+    });
+    const d = await r.json();
+    
+    if (d.success) {
+      showModal('🚨 TAMPER ATTACK COMPLETED', 'The transaction value was successfully altered in blockchain.json! Check the navbar validation status or reload dashboard to see validation fail.');
+      updateStatus(); // Reload navbar status badge instantly
+    } else {
+      alert('Tampering failed: ' + d.message);
+    }
+  }
+  
+  async function restoreLedger() {
+    const r = await fetch('/api/restore_ledger', { method: 'POST' });
+    const d = await r.json();
+    
+    if (d.success) {
+      showModal('🛡️ CHAIN SELF-HEALED', 'Ledger restored successfully from cryptographic backup. Integrity matches verification checks again!');
+      updateStatus(); // Reload navbar status badge instantly
+      setTimeout(() => { window.location.reload(); }, 2000);
+    } else {
+      alert('Ledger recovery failed: ' + d.message);
+    }
+  }
+  
+  function confirmResetSystem() {
+    if(confirm('🚨 WARNING: This will completely wipe all mined blocks and reset voter records. Are you sure you want to proceed?')) {
+      resetSystem();
+    }
+  }
+  
+  async function resetSystem() {
+    const r = await fetch('/api/reset_system', { method: 'POST' });
+    const d = await r.json();
+    
+    if(d.success) {
+      showModal('♻️ System Reset Successfully', 'Blockchain was wiped and re-initialized, and voter databases reset to fresh state.');
+      setTimeout(() => { window.location.href = '/'; }, 2000);
+    } else {
+      alert('Reset failed: ' + d.message);
+    }
+  }
+</script>
+{% endblock %}

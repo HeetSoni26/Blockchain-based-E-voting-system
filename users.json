@@ -1,0 +1,102 @@
+[
+  {
+    "aadhaar": "1234 5678 9012",
+    "name": "Arjun Sharma",
+    "dob": "1990-04-15",
+    "pincode": "110001",
+    "region": "New Delhi",
+    "email": "heetks2607@gmail.com",
+    "photo": "user1.png",
+    "voted": true
+  },
+  {
+    "aadhaar": "2345 6789 0123",
+    "name": "Priya Patel",
+    "dob": "1985-08-22",
+    "pincode": "380001",
+    "region": "Ahmedabad, Gujarat",
+    "email": "jainitsoni07@gmail.com",
+    "photo": "user2.png",
+    "voted": true
+  },
+  {
+    "aadhaar": "3456 7890 1234",
+    "name": "Rahul Verma",
+    "dob": "1992-12-05",
+    "pincode": "400001",
+    "region": "Mumbai, Maharashtra",
+    "email": "heetsoni26@gmail.com",
+    "photo": "user3.png",
+    "voted": true
+  },
+  {
+    "aadhaar": "4567 8901 2345",
+    "name": "Sunita Reddy",
+    "dob": "1988-03-18",
+    "pincode": "500001",
+    "region": "Hyderabad, Telangana",
+    "email": "heetsoni26@gmail.com",
+    "photo": "user4.png",
+    "voted": true
+  },
+  {
+    "aadhaar": "5678 9012 3456",
+    "name": "Amit Kumar",
+    "dob": "1995-07-30",
+    "pincode": "700001",
+    "region": "Kolkata, West Bengal",
+    "email": "soniheet26@gmail.com",
+    "photo": "user5.png",
+    "voted": false
+  },
+  {
+    "aadhaar": "6789 0123 4567",
+    "name": "Deepika Singh",
+    "dob": "1991-11-14",
+    "pincode": "600001",
+    "region": "Chennai, Tamil Nadu",
+    "email": "deepika.singh@gmail.com",
+    "photo": "user6.png",
+    "voted": true
+  },
+  {
+    "aadhaar": "7890 1234 5678",
+    "name": "Vikram Nair",
+    "dob": "1987-02-28",
+    "pincode": "682001",
+    "region": "Kochi, Kerala",
+    "email": "vikram.nair@gmail.com",
+    "photo": "user7.png",
+    "voted": false
+  },
+  {
+    "aadhaar": "8901 2345 6789",
+    "name": "Kavya Joshi",
+    "dob": "1993-09-07",
+    "pincode": "411001",
+    "region": "Pune, Maharashtra",
+    "email": "kavya.joshi@gmail.com",
+    "photo": "user8.png",
+    "voted": false
+  },
+  {
+    "aadhaar": "9012 3456 7890",
+    "name": "Suresh Gupta",
+    "dob": "1984-05-20",
+    "pincode": "302001",
+    "region": "Jaipur, Rajasthan",
+    "email": "suresh.gupta@gmail.com",
+    "photo": "user9.png",
+    "voted": false
+  },
+  {
+    "aadhaar": "0123 4567 8901",
+    "name": "Meera Iyer",
+    "dob": "1996-01-25",
+    "pincode": "560001",
+    "region": "Bengaluru, Karnataka",
+    "email": "echoman.studio@gmail.com",
+    "photo": "user10.png",
+    "voted": true
+  }
+]

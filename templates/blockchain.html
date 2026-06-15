@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Blockchain Explorer — BlockVote{% endblock %}
+
+{% block extra_css %}
+<style>
+  .chain-wrap{overflow-x:auto;padding-bottom:2rem}
+
+  .chain-scroll{
+    display:flex;flex-direction:column;gap:0;
+    min-width:600px;max-width:900px;margin:0 auto;
+  }
+
+  /* ---- Block card ---- */
+  .block-node{
+    position:relative;
+    background:var(--bg3);border:1px solid var(--border);
+    border-radius:16px;padding:1.5rem 1.8rem;
+    transition:border-color .3s;
+  }
+  .block-node:hover{border-color:var(--accent)}
+  .block-node.genesis{border-color:rgba(255,204,0,.4);background:rgba(255,204,0,.03)}
+
+  .block-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem}
+  .block-id{
+    font-family:'Rajdhani',sans-serif;font-size:1.4rem;font-weight:700;
+    color:#fff;display:flex;align-items:center;gap:.7rem;
+  }
+  .block-id-num{
+    width:36px;height:36px;border-radius:8px;
+    background:rgba(0,212,255,.15);border:1px solid rgba(0,212,255,.3);
+    display:flex;align-items:center;justify-content:center;
+    font-size:1rem;color:var(--accent);
+  }
+  .genesis-badge{
+    font-size:.72rem;background:var(--warn);color:#000;
+    padding:.15rem .5rem;border-radius:4px;
+    font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:.5px;
+  }
+  .block-ts{font-family:'Share Tech Mono',monospace;font-size:.75rem;color:var(--text2)}
+
+  .block-fields{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+  .bf{background:var(--bg2);border-radius:8px;padding:.7rem .9rem;border:1px solid var(--border)}
+  .bf label{
+    display:block;font-size:.7rem;color:var(--text2);
+    letter-spacing:.5px;text-transform:uppercase;
+    font-family:'Rajdhani',sans-serif;margin-bottom:.25rem;
+  }
+  .bf .val{
+    font-family:'Share Tech Mono',monospace;font-size:.78rem;
+    color:var(--accent);word-break:break-all;line-height:1.4;
+  }
+  .bf .val.green{color:var(--accent2)}
+  .bf .val.big{font-size:1.1rem}
+  .bf.full{grid-column:1/-1}
+
+  /* ---- Transactions ---- */
+  .tx-list{
+    margin-top:1rem;padding-top:1rem;
+    border-top:1px solid var(--border);
+  }
+  .tx-list h4{
+    font-family:'Rajdhani',sans-serif;font-size:.9rem;
+    color:var(--text2);letter-spacing:.5px;margin-bottom:.6rem;
+  }
+  .tx-item{
+    background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.12);
+    border-radius:6px;padding:.5rem .8rem;margin-bottom:.4rem;
+    font-family:'Share Tech Mono',monospace;font-size:.74rem;
+    color:var(--accent2);
+  }
+  .tx-item .tx-party{
+    font-family:'Rajdhani',sans-serif;font-size:.85rem;font-weight:700;
+    color:#fff;margin-bottom:.2rem;
+  }
+
+  /* ---- Connector ---- */
+  .chain-connector{
+    display:flex;flex-direction:column;align-items:center;
+    padding:.5rem 0;position:relative;
+  }
+  .connector-line{width:2px;height:30px;background:linear-gradient(180deg,var(--accent),var(--accent2));opacity:.4}
+  .connector-arrow{
+    width:12px;height:12px;border-right:2px solid var(--accent2);border-bottom:2px solid var(--accent2);
+    transform:rotate(45deg);margin-top:-6px;opacity:.7;
+  }
+  .connector-label{
+    font-family:'Share Tech Mono',monospace;font-size:.68rem;
+    color:var(--text2);margin-top:.3rem;
+  }
+
+  /* ---- Stats strip ---- */
+  .chain-stats{
+    display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:2rem;
+  }
+  .cs-item{
+    background:var(--bg3);border:1px solid var(--border);
+    border-radius:10px;padding:.8rem 1.2rem;flex:1;min-width:140px;
+  }
+  .cs-item .num{
+    font-family:'Rajdhani',sans-serif;font-size:1.8rem;color:var(--accent);font-weight:700;
+  }
+  .cs-item .lbl{font-size:.78rem;color:var(--text2)}
+
+  .empty-chain{text-align:center;padding:3rem;color:var(--text2)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>Blockchain <span>Explorer</span></h1>
+    <p>Full visualization of the immutable vote ledger</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="chain-stats">
+    <div class="cs-item">
+      <div class="num">{{ chain|length }}</div>
+      <div class="lbl">TOTAL BLOCKS</div>
+    </div>
+    <div class="cs-item">
+      <div class="num">
+        {{ chain[1:]|map(attribute='transactions')|map('length')|sum }}
+      </div>
+      <div class="lbl">TOTAL TRANSACTIONS</div>
+    </div>
+    <div class="cs-item">
+      <div class="num" style="color:var(--accent2)">✓</div>
+      <div class="lbl">CHAIN INTEGRITY</div>
+    </div>
+    <div class="cs-item">
+      <div class="num">4</div>
+      <div class="lbl">MINING DIFFICULTY</div>
+    </div>
+  </div>
+
+  <div class="chain-wrap">
+    <div class="chain-scroll">
+      {% for block in chain %}
+      {% set is_genesis = (block.index == 0) %}
+
+      <div class="block-node {% if is_genesis %}genesis{% endif %}">
+        <div class="block-header">
+          <div class="block-id">
+            <div class="block-id-num">{{ block.index }}</div>
+            BLOCK #{{ block.index }}
+            {% if is_genesis %}<span class="genesis-badge">GENESIS</span>{% endif %}
+          </div>
+          <div class="block-ts">{{ block.timestamp[:19].replace('T',' ') }} UTC</div>
+        </div>
+
+        <div class="block-fields">
+          <div class="bf">
+            <label>Nonce</label>
+            <div class="val big">{{ block.nonce }}</div>
+          </div>
+          <div class="bf">
+            <label>Transactions</label>
+            <div class="val big">{{ block.transactions|length }}</div>
+          </div>
+          <div class="bf full">
+            <label>Previous Hash</label>
+            <div class="val">{{ block.previous_hash }}</div>
+          </div>
+          <div class="bf full">
+            <label>Merkle Root</label>
+            <div class="val">{{ block.merkle_root }}</div>
+          </div>
+          <div class="bf full">
+            <label>Block Hash</label>
+            <div class="val green">{{ block.hash }}</div>
+          </div>
+        </div>
+
+        {% if block.transactions %}
+        <div class="tx-list">
+          <h4>📋 TRANSACTIONS ({{ block.transactions|length }})</h4>
+          {% for tx in block.transactions %}
+          <div class="tx-item">
+            <div class="tx-party">Vote: {{ tx.party }}</div>
+            <div>Ballot: {{ tx.ballot_hash[:32] }}...</div>
+            <div>Sig: {{ tx.signature[:32] }}...</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% elif is_genesis %}
+        <div style="margin-top:.8rem;font-size:.82rem;color:var(--text2)">
+          🔐 Genesis block — chain origin
+        </div>
+        {% endif %}
+      </div>
+
+      {% if not loop.last %}
+      <div class="chain-connector">
+        <div class="connector-line"></div>
+        <div class="connector-arrow"></div>
+        <div class="connector-label">HASH LINK</div>
+      </div>
+      {% endif %}
+
+      {% endfor %}
+
+      {% if chain|length == 0 %}
+      <div class="empty-chain">No blocks yet. Cast votes and mine to create blocks.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Staggered block entrance animation
+  document.querySelectorAll('.block-node').forEach((b, i)=>{
+    b.style.opacity = '0';
+    b.style.transform = 'translateY(20px)';
+    b.style.transition = 'all .4s ease';
+    setTimeout(()=>{
+      b.style.opacity = '1';
+      b.style.transform = 'translateY(0)';
+    }, i * 120);
+  });
+</script>
+{% endblock %}

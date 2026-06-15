@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>{% block title %}BlockVote — Blockchain E-Voting{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --bg:#04060f;
+    --bg2:#080d1e;
+    --bg3:#0d1530;
+    --accent:#00d4ff;
+    --accent2:#00ff88;
+    --accent3:#ff6b35;
+    --warn:#ffcc00;
+    --text:#d0e8ff;
+    --text2:#7090b0;
+    --border:#1a3050;
+    --glow: 0 0 20px rgba(0,212,255,.25);
+    --glow2: 0 0 20px rgba(0,255,136,.25);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Exo 2',sans-serif;
+    min-height:100vh;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0,80,160,.18) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+  }
+
+  /* ---- NAV ---- */
+  nav{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 2rem;height:64px;
+    background:rgba(8,13,30,.95);
+    border-bottom:1px solid var(--border);
+    position:sticky;top:0;z-index:100;
+    backdrop-filter:blur(10px);
+  }
+  .nav-logo{
+    display:flex;align-items:center;gap:.6rem;
+    font-family:'Rajdhani',sans-serif;font-size:1.4rem;font-weight:700;
+    color:var(--accent);letter-spacing:2px;text-decoration:none;
+  }
+  .nav-logo svg{width:28px;height:28px}
+  .nav-links{display:flex;gap:.25rem}
+  .nav-links a{
+    color:var(--text2);text-decoration:none;padding:.4rem .9rem;
+    border-radius:6px;font-size:.85rem;font-weight:600;letter-spacing:.5px;
+    transition:all .2s;font-family:'Rajdhani',sans-serif;
+  }
+  .nav-links a:hover,.nav-links a.active{
+    color:var(--accent);background:rgba(0,212,255,.1);
+  }
+  .chain-badge{
+    font-family:'Share Tech Mono',monospace;font-size:.75rem;
+    background:rgba(0,255,136,.08);color:var(--accent2);
+    border:1px solid rgba(0,255,136,.25);
+    padding:.2rem .7rem;border-radius:20px;
+    transition: all .3s ease;
+  }
+  .chain-badge.invalid{
+    background:rgba(255,51,85,.15);color:var(--accent3);
+    border-color:rgba(255,51,85,.4);
+    box-shadow:0 0 12px rgba(255,51,85,.35);
+    animation:pulse-red 1.5s infinite ease-in-out;
+  }
+  @keyframes pulse-red{
+    0%{opacity:1;box-shadow:0 0 12px rgba(255,51,85,.35)}
+    50%{opacity:.6;box-shadow:0 0 4px rgba(255,51,85,.1)}
+    100%{opacity:1;box-shadow:0 0 12px rgba(255,51,85,.35)}
+  }
+
+  /* ---- CONTAINER ---- */
+  .container{max-width:1100px;margin:0 auto;padding:2rem 1.5rem}
+
+  /* ---- PAGE HEADER ---- */
+  .page-header{margin-bottom:2.5rem}
+  .page-header h1{
+    font-family:'Rajdhani',sans-serif;font-size:2.2rem;font-weight:700;
+    color:#fff;letter-spacing:1px;
+  }
+  .page-header p{color:var(--text2);margin-top:.3rem;font-size:.95rem}
+  .page-header h1 span{color:var(--accent)}
+
+  /* ---- CARD ---- */
+  .card{
+    background:var(--bg3);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:1.5rem;
+    transition:border-color .3s;
+  }
+  .card:hover{border-color:rgba(0,212,255,.3)}
+
+  /* ---- BTN ---- */
+  .btn{
+    display:inline-flex;align-items:center;gap:.5rem;
+    padding:.65rem 1.5rem;border-radius:8px;
+    font-family:'Rajdhani',sans-serif;font-size:1rem;font-weight:700;
+    letter-spacing:.8px;cursor:pointer;border:none;
+    transition:all .2s;text-decoration:none;
+  }
+  .btn-primary{background:var(--accent);color:#04060f}
+  .btn-primary:hover{background:#33ddff;box-shadow:var(--glow);transform:translateY(-1px)}
+  .btn-success{background:var(--accent2);color:#04060f}
+  .btn-success:hover{background:#33ffaa;box-shadow:var(--glow2);transform:translateY(-1px)}
+  .btn-outline{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+  .btn-outline:hover{background:rgba(0,212,255,.1)}
+  .btn-danger{background:#ff3355;color:#fff}
+  .btn-danger:hover{background:#ff5577;transform:translateY(-1px)}
+  .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+
+  /* ---- FORM ---- */
+  .form-group{margin-bottom:1.25rem}
+  .form-group label{
+    display:block;margin-bottom:.4rem;
+    font-family:'Rajdhani',sans-serif;font-size:.9rem;
+    font-weight:600;color:var(--text2);letter-spacing:.5px;
+  }
+  .form-control{
+    width:100%;background:var(--bg2);
+    border:1px solid var(--border);border-radius:8px;
+    padding:.7rem 1rem;color:var(--text);
+    font-family:'Exo 2',sans-serif;font-size:.95rem;
+    outline:none;transition:border-color .2s;
+  }
+  .form-control:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
+  .form-control::placeholder{color:var(--text2)}
+
+  /* ---- ALERTS ---- */
+  .alert{padding:.9rem 1.2rem;border-radius:8px;margin-bottom:1rem;font-size:.9rem}
+  .alert-error{background:rgba(255,51,85,.1);border:1px solid rgba(255,51,85,.3);color:#ff8899}
+  .alert-success{background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--accent2)}
+  .alert-info{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);color:var(--accent)}
+
+  /* ---- HASH TEXT ---- */
+  .hash{
+    font-family:'Share Tech Mono',monospace;font-size:.8rem;
+    color:var(--accent2);word-break:break-all;
+    background:rgba(0,255,136,.05);padding:.4rem .7rem;
+    border-radius:6px;border:1px solid rgba(0,255,136,.15);
+  }
+
+  /* ---- GRID SCANLINE BG ---- */
+  body::before{
+    content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:
+      linear-gradient(rgba(0,212,255,.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,.015) 1px, transparent 1px);
+    background-size:40px 40px;
+  }
+
+  /* ---- MODAL ---- */
+  .modal-overlay{
+    display:none;position:fixed;inset:0;z-index:999;
+    background:rgba(0,0,0,.75);backdrop-filter:blur(6px);
+    align-items:center;justify-content:center;
+  }
+  .modal-overlay.show{display:flex}
+  .modal{
+    background:var(--bg3);border:1px solid var(--accent);
+    border-radius:16px;padding:2.5rem;
+    max-width:460px;width:90%;text-align:center;
+    box-shadow:0 0 60px rgba(0,212,255,.2);
+    animation:modalIn .3s ease;
+  }
+  @keyframes modalIn{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+
+  .modal .icon{font-size:3rem;margin-bottom:1rem}
+  .modal h2{font-family:'Rajdhani',sans-serif;font-size:1.7rem;margin-bottom:.5rem}
+  .modal p{color:var(--text2);font-size:.95rem}
+
+  /* scrollbar */
+  ::-webkit-scrollbar{width:6px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="/">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="2" y="7" width="6" height="10" rx="1"/>
+      <rect x="9" y="4" width="6" height="16" rx="1"/>
+      <rect x="16" y="7" width="6" height="10" rx="1"/>
+      <path d="M8 12h1M15 12h1" stroke-linecap="round"/>
+    </svg>
+    BLOCKVOTE
+  </a>
+  <div class="nav-links">
+    <a href="/" class="{% if request.endpoint=='index' %}active{% endif %}">Dashboard</a>
+    <a href="/verify" class="{% if request.endpoint=='verify' %}active{% endif %}">Vote</a>
+    <a href="/results" class="{% if request.endpoint=='results' %}active{% endif %}">Results</a>
+    <a href="/mining" class="{% if request.endpoint=='mining' %}active{% endif %}">Mining</a>
+    <a href="/blockchain_view" class="{% if request.endpoint=='blockchain_view' %}active{% endif %}">Chain</a>
+    <a href="/audit" class="{% if request.endpoint=='audit' %}active{% endif %}">Audit</a>
+    <a href="/admin" class="{% if request.endpoint=='admin' %}active{% endif %}">Admin</a>
+  </div>
+  <span class="chain-badge" id="nav-status">◉ CHAIN VALID</span>
+</nav>
+
+<div style="position:relative;z-index:1">
+  {% block content %}{% endblock %}
+</div>
+
+<!-- Success Modal -->
+<div class="modal-overlay" id="successModal">
+  <div class="modal">
+    <div class="icon">✅</div>
+    <h2 style="color:var(--accent2)" id="modal-title">Success</h2>
+    <p id="modal-msg">Operation completed.</p>
+    <button class="btn btn-success" style="margin-top:1.5rem" onclick="closeModal()">Continue</button>
+  </div>
+</div>
+
+<script>
+  function showModal(title, msg){
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-msg').textContent = msg;
+    document.getElementById('successModal').classList.add('show');
+  }
+  function closeModal(){
+    document.getElementById('successModal').classList.remove('show');
+  }
+
+  // Live chain status
+  async function updateStatus(){
+    try{
+      const r = await fetch('/api/chain_status');
+      const d = await r.json();
+      const el = document.getElementById('nav-status');
+      el.textContent = d.is_valid ? `◉ CHAIN VALID` : `⚠ CHAIN INVALID`;
+      if(d.is_valid){
+        el.classList.remove('invalid');
+      } else {
+        el.classList.add('invalid');
+      }
+    }catch(e){}
+  }
+  updateStatus();
+  setInterval(updateStatus, 10000);
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Election Results — BlockVote{% endblock %}
+
+{% block extra_css %}
+<style>
+  .results-wrap{max-width:780px;margin:0 auto}
+
+  .total-banner{
+    background:linear-gradient(135deg,rgba(0,212,255,.1),rgba(0,255,136,.05));
+    border:1px solid rgba(0,212,255,.25);border-radius:16px;
+    padding:1.8rem 2rem;margin-bottom:2rem;
+    display:flex;align-items:center;gap:2rem;
+  }
+  .total-num{
+    font-family:'Rajdhani',sans-serif;font-size:4rem;font-weight:700;
+    color:var(--accent);line-height:1;
+  }
+  .total-label{color:var(--text2);font-size:.9rem;margin-top:.2rem}
+
+  .party-results{display:flex;flex-direction:column;gap:1rem}
+  .party-row{
+    background:var(--bg3);border:1px solid var(--border);
+    border-radius:12px;padding:1.2rem 1.5rem;
+  }
+  .party-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.7rem}
+  .party-info{display:flex;align-items:center;gap:.8rem}
+  .party-emoji{font-size:1.6rem}
+  .party-title{font-family:'Rajdhani',sans-serif;font-size:1.2rem;font-weight:700;color:#fff}
+  .party-full{font-size:.8rem;color:var(--text2)}
+  .party-count{
+    font-family:'Share Tech Mono',monospace;font-size:1.8rem;
+    color:var(--accent);font-weight:bold;
+  }
+  .progress-bar-wrap{
+    background:rgba(255,255,255,.06);border-radius:4px;height:8px;overflow:hidden;
+  }
+  .progress-bar{
+    height:100%;border-radius:4px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    transition:width 1s cubic-bezier(.17,.67,.34,1.2);
+    width:0;
+  }
+  .party-row.winner{border-color:var(--warn);background:rgba(255,204,0,.04)}
+  .winner-badge{
+    font-family:'Rajdhani',sans-serif;font-size:.75rem;font-weight:700;
+    background:var(--warn);color:#000;
+    padding:.15rem .5rem;border-radius:4px;letter-spacing:.5px;
+  }
+
+  .info-strip{
+    margin-top:2rem;padding:1rem 1.2rem;
+    background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.12);
+    border-radius:8px;color:var(--text2);font-size:.85rem;
+    display:flex;align-items:center;gap:.6rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>Election <span>Results</span></h1>
+    <p>Live vote counts from the blockchain ledger</p>
+  </div>
+
+  <div class="results-wrap">
+    <div class="total-banner">
+      <div>
+        <div class="total-num">{{ total }}</div>
+        <div class="total-label">TOTAL VOTES CAST</div>
+      </div>
+      <div style="border-left:1px solid var(--border);padding-left:2rem;flex:1">
+        <p style="font-size:.9rem;color:var(--text2);line-height:1.6">
+          These results reflect all votes mined into the blockchain.
+          Pending unconfirmed transactions may not be shown until mined.
+        </p>
+        <a href="/mining" class="btn btn-outline" style="margin-top:.8rem;font-size:.85rem;padding:.4rem .9rem">
+          ⛏️ Mine Pending
+        </a>
+      </div>
+    </div>
+
+    {% set parties = [
+      ('BJP','🪷','Bharatiya Janata Party'),
+      ('Congress','✋','Indian National Congress'),
+      ('AAP','🧹','Aam Aadmi Party'),
+      ('NOTA','✖️','None of the Above'),
+      ('Independent','🏛️','Independent Candidate')
+    ] %}
+
+    {% set max_votes = counts.values()|max if total > 0 else 1 %}
+
+    <div class="party-results" id="partyResults">
+      {% for key, icon, fullname in parties %}
+      {% set v = counts.get(key, 0) %}
+      {% set pct = (v / total * 100)|round(1) if total > 0 else 0 %}
+      {% set is_winner = (v == max_votes and total > 0 and v > 0) %}
+      <div class="party-row {% if is_winner %}winner{% endif %}" data-pct="{{ pct }}">
+        <div class="party-top">
+          <div class="party-info">
+            <span class="party-emoji">{{ icon }}</span>
+            <div>
+              <div class="party-title">
+                {{ key }}
+                {% if is_winner %}<span class="winner-badge">LEADING</span>{% endif %}
+              </div>
+              <div class="party-full">{{ fullname }}</div>
+            </div>
+          </div>
+          <div>
+            <div class="party-count">{{ v }}</div>
+            <div style="font-size:.78rem;color:var(--text2);text-align:right">{{ pct }}%</div>
+          </div>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" style="--target:{{ pct }}%"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="info-strip">
+      ℹ️ Results are sourced directly from the blockchain. Each block contains signed ballot transactions.
+      Chain integrity: <strong style="color:var(--accent2)">VALID ✓</strong>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Animate progress bars on load
+  setTimeout(()=>{
+    document.querySelectorAll('.progress-bar').forEach(bar=>{
+      const pct = bar.closest('.party-row').dataset.pct;
+      bar.style.width = pct + '%';
+    });
+  }, 200);
+</script>
+{% endblock %}
