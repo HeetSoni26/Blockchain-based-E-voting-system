@@ -510,9 +510,50 @@ def api_save_smtp():
         return jsonify({"success": False, "message": "Failed to save SMTP credentials"})
 
 
-@app.route("/api/reset_system", methods=["POST"])
-def api_reset_system():
-    """Wipes the blockchain ledger and resets voted statuses."""
+@app.route("/api/admin_reset_otp", methods=["POST"])
+def api_admin_reset_otp():
+    """Send an OTP to the authorized admin email for system reset."""
+    data = request.get_json()
+    email = data.get("email", "").strip()
+    
+    if email != "minerminer11110@gmail.com":
+        return jsonify({"success": False, "message": "Unauthorized email. Reset denied."})
+        
+    otp = str(random.randint(100000, 999999))
+    session["admin_reset_otp"] = otp
+    
+    body = f"""
+    <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;
+                background:#3e0000;color:#e0e0ff;padding:30px;border-radius:12px;border: 2px solid #ff3355;">
+      <h2 style="color:#ff3355;">🚨 EMERGENCY RESET OTP</h2>
+      <p>An emergency wipe of the blockchain ledger was requested.</p>
+      <div style="background:#1a0000;padding:20px;border-radius:8px;
+                  text-align:center;font-size:36px;letter-spacing:12px;
+                  color:#ff3355;font-weight:bold;border:1px solid #ff3355;">
+        {otp}
+      </div>
+      <p style="font-size:13px;color:#ffaaaa;margin-top:20px;">
+        WARNING: Proceeding will permanently delete all votes.
+      </p>
+    </div>
+    """
+    
+    if send_email(email, "🚨 EMERGENCY RESET OTP", body):
+        return jsonify({"success": True, "message": "Emergency reset OTP sent."})
+    else:
+        return jsonify({"success": False, "message": "Failed to send OTP via SMTP."})
+
+
+@app.route("/api/reset_system_secure", methods=["POST"])
+def api_reset_system_secure():
+    """Wipes the blockchain ledger and resets voted statuses with OTP verification."""
+    data = request.get_json()
+    entered_otp = data.get("otp", "").strip()
+    stored_otp = session.get("admin_reset_otp")
+    
+    if not stored_otp or entered_otp != stored_otp:
+        return jsonify({"success": False, "message": "Invalid or expired OTP."})
+        
     try:
         blockchain.reset()
         

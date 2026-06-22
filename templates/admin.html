@@ -216,9 +216,18 @@
         <p style="color:var(--text2);font-size:0.85rem;margin-bottom:1.2rem">
           Wipe the blockchain file (`blockchain.json`) and reset all voter statuses to `NOT VOTED` for testing.
         </p>
-        <button class="btn btn-danger" onclick="confirmResetSystem()">
-          🚨 Reset E-Voting System
-        </button>
+        <div id="resetRequestSection">
+          <input type="email" id="adminEmail" class="form-control" placeholder="Admin Email (minerminer11110@gmail.com)" style="margin-bottom:0.8rem; width:100%">
+          <button class="btn btn-danger" onclick="requestAdminResetOTP()" style="width:100%">
+            🚨 Request Reset OTP
+          </button>
+        </div>
+        <div id="resetOtpSection" style="display:none; margin-top: 1rem;">
+          <input type="text" id="adminOtp" class="form-control" placeholder="Enter OTP from Email" style="margin-bottom:0.8rem; width:100%">
+          <button class="btn btn-danger" onclick="verifyAdminResetOTP()" style="width:100%">
+            🚨 Verify & Reset System
+          </button>
+        </div>
       </div>
     </div>
     
@@ -375,21 +384,49 @@
     }
   }
   
-  function confirmResetSystem() {
-    if(confirm('🚨 WARNING: This will completely wipe all mined blocks and reset voter records. Are you sure you want to proceed?')) {
-      resetSystem();
+  async function requestAdminResetOTP() {
+    const email = document.getElementById('adminEmail').value.trim();
+    if(!email) {
+      alert('Please enter the admin email.');
+      return;
+    }
+    if(email !== 'minerminer11110@gmail.com') {
+      alert('Access Denied. Only the authorized admin email can perform this action.');
+      return;
+    }
+    const r = await fetch('/api/admin_reset_otp', { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    });
+    const d = await r.json();
+    if(d.success) {
+      document.getElementById('resetRequestSection').style.display = 'none';
+      document.getElementById('resetOtpSection').style.display = 'block';
+      alert('OTP sent to admin email. Please check your inbox.');
+    } else {
+      alert(d.message);
     }
   }
-  
-  async function resetSystem() {
-    const r = await fetch('/api/reset_system', { method: 'POST' });
-    const d = await r.json();
+
+  async function verifyAdminResetOTP() {
+    const otp = document.getElementById('adminOtp').value.trim();
+    if(!otp) return alert('Please enter the OTP.');
     
-    if(d.success) {
-      showModal('♻️ System Reset Successfully', 'Blockchain was wiped and re-initialized, and voter databases reset to fresh state.');
-      setTimeout(() => { window.location.href = '/'; }, 2000);
-    } else {
-      alert('Reset failed: ' + d.message);
+    if(confirm('🚨 WARNING: This will completely wipe all mined blocks and reset voter records. Are you sure you want to proceed?')) {
+      const r = await fetch('/api/reset_system_secure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ otp: otp })
+      });
+      const d = await r.json();
+      
+      if(d.success) {
+        showModal('♻️ System Reset Successfully', 'Blockchain was wiped and re-initialized, and voter databases reset to fresh state.');
+        setTimeout(() => { window.location.href = '/'; }, 2000);
+      } else {
+        alert('Reset failed: ' + d.message);
+      }
     }
   }
 </script>
