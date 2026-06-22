@@ -203,7 +203,8 @@ def results():
     counts = blockchain.get_vote_counts()
     regional_counts = blockchain.get_regional_counts()
     total = blockchain.get_total_votes()
-    return render_template("results.html", counts=counts, regional_counts=regional_counts, total=total)
+    stats = blockchain.get_chain_status()
+    return render_template("results.html", counts=counts, regional_counts=regional_counts, total=total, stats=stats)
 
 
 @app.route("/mining")
