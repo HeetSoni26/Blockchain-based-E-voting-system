@@ -264,7 +264,7 @@
           
           <div class="step-row">
             <div class="step-check" id="step-sig-check">✓</div>
-            <div><strong>Signature Verification:</strong> Signature matches voter private key and ballot hash (proof of source).</div>
+            <div><strong>RSA Signature Verification:</strong> Signature matches voter's asymmetric public key (proof of source).</div>
           </div>
           
           <div class="step-row" id="step-merkle-row">
@@ -277,6 +277,10 @@
             <div><strong>Block Chain Integrity:</strong> Block previous hash perfectly matches preceding block hash.</div>
           </div>
         </div>
+
+        <button class="btn btn-primary" id="btnDownloadReceipt" style="width: 100%; margin-top: 1.5rem; justify-content: center; display: none;" onclick="downloadReceipt()">
+          📄 Download Official Cryptographic Receipt
+        </button>
       </div>
       
       <div class="hint-box">
@@ -399,6 +403,7 @@
       const badge = document.getElementById('statusBadge');
       badge.className = 'audit-badge badge-sealed';
       badge.textContent = `✓ SEALED & SECURED IN BLOCK #${blockIndex}`;
+      document.getElementById('btnDownloadReceipt').style.display = 'flex';
     } else {
       // The chain has been tampered! Let's display warning
       setStepState('step-merkle-check', false, 'Failed! Merkle Consistency Compromised.');
@@ -422,6 +427,42 @@
       el.className = 'step-check fail';
       el.style.color = 'var(--accent3)';
     }
+  }
+
+  function downloadReceipt() {
+    const hash = document.getElementById('res-ballothash').textContent;
+    const sig = document.getElementById('res-signature').textContent;
+    const block = document.getElementById('res-blockid').textContent;
+    const ts = document.getElementById('res-timestamp').textContent;
+    const merkle = document.getElementById('res-merkleroot').textContent;
+    
+    const content = `
+==================================================
+        BLOCKVOTE OFFICIAL RECEIPT
+==================================================
+
+STATUS:        SEALED & SECURED
+BLOCK ID:      ${block}
+TIMESTAMP:     ${ts}
+
+--- CRYPTOGRAPHIC PROOFS ---
+BALLOT HASH:   ${hash}
+RSA SIGNATURE: ${sig}
+MERKLE ROOT:   ${merkle}
+
+==================================================
+This receipt provides mathematical proof that your 
+vote was cast, securely signed with your asymmetric
+private key, and sealed within the immutable ledger.
+==================================================
+    `;
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `BlockVote_Receipt_${hash.substring(0, 8)}.txt`;
+    a.click();
+    URL.revokeObjectURL(a.href);
   }
 </script>
 {% endblock %}

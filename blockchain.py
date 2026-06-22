@@ -9,6 +9,7 @@ import os
 import time
 import random
 import string
+import binascii
 from datetime import datetime
 
 if os.environ.get("VERCEL"):
@@ -235,20 +236,14 @@ class Blockchain:
     #  Voting helpers
     # ------------------------------------------------------------------ #
 
-    def add_vote_transaction(self, aadhaar: str, party: str, private_key: str) -> dict:
+    def add_vote_transaction(self, aadhaar: str, party: str, public_key: str, signature: str, ballot_hash: str) -> dict:
         """
-        Hash the vote and add it as a pending transaction.
-        Returns the ballot hash and signature.
+        Add an externally signed vote as a pending transaction.
         """
-        ballot_payload = json.dumps(
-            {"aadhaar": aadhaar, "party": party, "ts": time.time()}, sort_keys=True
-        )
-        ballot_hash = sha256(ballot_payload)
-        signature = sha256(ballot_hash + private_key)
-
         transaction = {
             "ballot_hash": ballot_hash,
             "signature": signature,
+            "public_key": public_key,
             "party": party,
             "aadhaar_hash": sha256(aadhaar),  # Never store raw Aadhaar
             "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -347,10 +342,66 @@ class Blockchain:
 
 
 # ------------------------------------------------------------------ #
-#  Private key generation
+#  RSA Cryptography (Pure Python Implementation)
 # ------------------------------------------------------------------ #
 
+def is_prime(n, k=5):
+    if n < 2: return False
+    for p in [2,3,5,7,11,13,17,19,23,29]:
+        if n % p == 0: return n == p
+    s, d = 0, n-1
+    while d % 2 == 0:
+        s, d = s+1, d//2
+    for i in range(k):
+        x = pow(random.randint(2, n-1), d, n)
+        if x == 1 or x == n-1: continue
+        for r in range(1, s):
+            x = (x * x) % n
+            if x == n-1: break
+        else: return False
+    return True
+
+def generate_prime(bits=128):
+    while True:
+        p = random.getrandbits(bits)
+        if p % 2 != 0 and is_prime(p): return p
+
+def egcd(a, b):
+    if a == 0: return (b, 0, 1)
+    g, y, x = egcd(b%a, a)
+    return (g, x - (b//a) * y, y)
+
+def modinv(a, m):
+    g, x, y = egcd(a, m)
+    if g != 1: raise Exception('No modular inverse')
+    return x % m
+
+def generate_rsa_keypair(bits=128):
+    """Generate a random RSA keypair for demonstration purposes."""
+    p = generate_prime(bits)
+    q = generate_prime(bits)
+    n = p * q
+    phi = (p-1) * (q-1)
+    e = 65537
+    d = modinv(e, phi)
+    return {"public": f"{e}:{n}", "private": f"{d}:{n}"}
+
+def rsa_sign(message_hash: str, private_key_str: str) -> str:
+    """Sign a message hash using the RSA private key."""
+    d, n = map(int, private_key_str.split(':'))
+    # Convert first 16 chars of hash (64 bits) to int to ensure it's < n
+    m = int(message_hash[:16], 16)
+    s = pow(m, d, n)
+    return hex(s)[2:]
+
+def rsa_verify(message_hash: str, signature_hex: str, public_key_str: str) -> bool:
+    """Verify a message signature using the RSA public key."""
+    e, n = map(int, public_key_str.split(':'))
+    s = int(signature_hex, 16)
+    m = pow(s, e, n)
+    return hex(m)[2:] == message_hash[:16]
+
 def generate_private_key(length: int = 32) -> str:
-    """Generate a random hex-based private key."""
-    chars = string.hexdigits[:16]  # 0-9, a-f
+    """Generate a random hex-based private key (legacy - kept for compatibility)."""
+    chars = string.hexdigits[:16]
     return "".join(random.choices(chars, k=length)).upper()

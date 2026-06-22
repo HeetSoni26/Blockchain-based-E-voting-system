@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Zero-Knowledge Proof — BlockVote{% endblock %}
+
+{% block extra_css %}
+<style>
+  .zkp-wrap {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .zkp-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .zkp-card::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+    background: linear-gradient(90deg, #a050ff, #00d4ff);
+  }
+  .zkp-header {
+    text-align: center; margin-bottom: 2rem;
+  }
+  .zkp-header h2 {
+    font-family: 'Rajdhani', sans-serif; font-size: 2rem; color: #fff;
+  }
+  .zkp-header p {
+    color: var(--text2); font-size: 0.95rem; margin-top: 0.5rem;
+  }
+  
+  .terminal {
+    background: #04060f; border: 1px solid #1a3050; border-radius: 8px;
+    padding: 1.5rem; font-family: 'Share Tech Mono', monospace; font-size: 0.85rem;
+    color: #d0e8ff; min-height: 250px; overflow-y: auto; margin-bottom: 2rem;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+  }
+  .log-line { margin-bottom: 0.5rem; }
+  .log-sys { color: #888; }
+  .log-info { color: #00d4ff; }
+  .log-success { color: #00ff88; }
+  .log-warn { color: #ffcc00; }
+  .log-err { color: #ff3355; }
+  
+  .controls {
+    display: grid; grid-template-columns: 1fr; gap: 1rem;
+  }
+  .input-group {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem;
+  }
+  .input-group label {
+    display: block; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem;
+    color: var(--text2); margin-bottom: 0.5rem; text-transform: uppercase;
+  }
+  .input-group input {
+    width: 100%; background: #04060f; border: 1px solid #1a3050;
+    padding: 0.8rem; color: #fff; font-family: 'Share Tech Mono', monospace;
+    border-radius: 4px; outline: none; transition: border-color 0.2s;
+  }
+  .input-group input:focus { border-color: #a050ff; }
+  
+  .btn-zkp {
+    background: linear-gradient(135deg, #a050ff, #00d4ff); color: #fff;
+    border: none; padding: 1rem; border-radius: 8px; font-family: 'Rajdhani', sans-serif;
+    font-size: 1.1rem; font-weight: 700; cursor: pointer; letter-spacing: 1px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .btn-zkp:hover {
+    transform: translateY(-2px); box-shadow: 0 5px 15px rgba(160,80,255,0.4);
+  }
+  
+  .math-box {
+    margin-top: 2rem; padding: 1.5rem; background: rgba(160,80,255,0.05);
+    border: 1px dashed rgba(160,80,255,0.3); border-radius: 8px; font-size: 0.9rem;
+    color: var(--text2); line-height: 1.5;
+  }
+  .math-box strong { color: #a050ff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>Zero-Knowledge <span>Proofs</span></h1>
+    <p>Mathematical verification of voter eligibility without revealing private keys</p>
+  </div>
+  
+  <div class="zkp-wrap">
+    <div class="zkp-card">
+      <div class="zkp-header">
+        <h2>Interactive ZKP Simulator</h2>
+        <p>Prove to the network you hold the valid RSA Private Key for a known Public Key, without ever transmitting the Private Key itself.</p>
+      </div>
+      
+      <div class="terminal" id="terminal">
+        <div class="log-line log-sys">> INITIALIZING ZKP PROTOCOL ENGINE...</div>
+        <div class="log-line log-sys">> WAITING FOR PROVER INPUT...</div>
+      </div>
+      
+      <div class="controls">
+        <div class="input-group">
+          <label>Voter Public Key (Known to Network)</label>
+          <input type="text" id="pubKey" placeholder="e.g. 65537:123456789" />
+        </div>
+        <div class="input-group">
+          <label>Voter Private Key (Never Sent over Network)</label>
+          <input type="password" id="privKey" placeholder="e.g. 987654321:123456789" />
+        </div>
+        <button class="btn-zkp" onclick="runZKP()">EXECUTE ZK-PROOF</button>
+      </div>
+      
+      <div class="math-box">
+        <strong>The Math behind the Magic:</strong><br/>
+        1. <strong>Verifier (Network):</strong> Generates a random challenge <code>C</code>.<br/>
+        2. <strong>Prover (Voter):</strong> Signs the challenge locally using modular exponentiation: <code>S = C^d mod n</code>.<br/>
+        3. <strong>Verifier (Network):</strong> Receives <code>S</code> and computes <code>C' = S^e mod n</code> using the Public Key.<br/>
+        4. If <code>C == C'</code>, the voter is mathematically proven to own the Private Key, while the Private Key <code>d</code> remains completely hidden.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function log(msg, type='info') {
+    const term = document.getElementById('terminal');
+    const div = document.createElement('div');
+    div.className = `log-line log-${type}`;
+    div.textContent = `> ${msg}`;
+    term.appendChild(div);
+    term.scrollTop = term.scrollHeight;
+  }
+  
+  // Basic BigInt modular exponentiation for JS client-side simulation
+  function powerMod(base, exponent, modulus) {
+    if (modulus === 1n) return 0n;
+    let result = 1n;
+    base = base % modulus;
+    while (exponent > 0n) {
+      if (exponent % 2n === 1n) result = (result * base) % modulus;
+      exponent = exponent / 2n;
+      base = (base * base) % modulus;
+    }
+    return result;
+  }
+
+  async function runZKP() {
+    const pub = document.getElementById('pubKey').value.trim();
+    const priv = document.getElementById('privKey').value.trim();
+    
+    document.getElementById('terminal').innerHTML = '';
+    
+    if (!pub || !priv) {
+      log('ERROR: Public and Private keys are required.', 'err');
+      return;
+    }
+    
+    try {
+      const [eStr, nStrPub] = pub.split(':');
+      const [dStr, nStrPriv] = priv.split(':');
+      
+      if (nStrPub !== nStrPriv) {
+        log('ERROR: Public and Private modulus (n) do not match!', 'err');
+        return;
+      }
+      
+      const e = BigInt(eStr);
+      const d = BigInt(dStr);
+      const n = BigInt(nStrPub);
+      
+      log(`[NETWORK] Generating random challenge...`, 'sys');
+      await new Promise(r => setTimeout(r, 600));
+      
+      // Generate random challenge smaller than n
+      const challenge = BigInt(Math.floor(Math.random() * 10000) + 1000);
+      log(`[NETWORK] Challenge C = ${challenge}`, 'info');
+      
+      log(`[CLIENT] Received challenge. Signing locally without exposing Private Key...`, 'sys');
+      await new Promise(r => setTimeout(r, 800));
+      
+      // Prover signs: S = C^d mod n
+      const signature = powerMod(challenge, d, n);
+      log(`[CLIENT] Generated Proof Signature S = ${signature}`, 'warn');
+      log(`[CLIENT] Sending Signature S to Network...`, 'sys');
+      
+      await new Promise(r => setTimeout(r, 800));
+      log(`[NETWORK] Received Proof Signature. Verifying using Public Key (e=${e}, n=${n})...`, 'sys');
+      
+      // Verifier checks: C' = S^e mod n
+      const verifiedChallenge = powerMod(signature, e, n);
+      log(`[NETWORK] Computed C' = ${verifiedChallenge}`, 'info');
+      
+      await new Promise(r => setTimeout(r, 600));
+      
+      if (verifiedChallenge === challenge) {
+        log(`[SUCCESS] ZK-Proof Verified! C == C'. Voter possesses the valid Private Key.`, 'success');
+      } else {
+        log(`[FAIL] Verification failed. C != C'. Invalid Private Key.`, 'err');
+      }
+      
+    } catch(err) {
+      log(`ERROR: Invalid key format. Expected e:n and d:n.`, 'err');
+    }
+  }
+</script>
+{% endblock %}

@@ -179,9 +179,25 @@
           <div class="tx-item">
             <div class="tx-party">Vote: {{ tx.party }}</div>
             <div>Ballot: {{ tx.ballot_hash[:32] }}...</div>
-            <div>Sig: {{ tx.signature[:32] }}...</div>
+            <div style="margin-top: 0.3rem;">
+              <span style="color:#00d4ff;">RSA PubKey:</span> {{ tx.public_key[:24] }}...
+            </div>
+            <div>
+              <span style="color:var(--accent2);">RSA Sig:</span> {{ tx.signature[:24] }}...
+            </div>
           </div>
           {% endfor %}
+          <button class="btn btn-outline" style="margin-top: 1rem; font-size: 0.8rem; padding: 0.4rem 0.8rem;" onclick="toggleMerkle('merkle-{{ block.index }}')">
+            🌳 Toggle Merkle Tree View
+          </button>
+          <div id="merkle-{{ block.index }}" style="display:none; margin-top: 1rem; padding: 1rem; background: rgba(0,212,255,0.05); border: 1px dashed rgba(0,212,255,0.3); border-radius: 8px;">
+            <div style="text-align:center; font-family:'Share Tech Mono',monospace; font-size: 0.8rem; color: #fff;">
+              <div style="color: var(--accent); margin-bottom: 0.5rem;">ROOT HASH</div>
+              <div>{{ block.merkle_root }}</div>
+              <div style="margin: 0.5rem 0;">↑</div>
+              <div style="color: var(--text2); font-size: 0.75rem;">Pairwise combination of {{ block.transactions|length }} transaction hashes using SHA-256</div>
+            </div>
+          </div>
         </div>
         {% elif is_genesis %}
         <div style="margin-top:.8rem;font-size:.82rem;color:var(--text2)">
@@ -220,5 +236,14 @@
       b.style.transform = 'translateY(0)';
     }, i * 120);
   });
+
+  function toggleMerkle(id) {
+    const el = document.getElementById(id);
+    if (el.style.display === 'none') {
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  }
 </script>
 {% endblock %}

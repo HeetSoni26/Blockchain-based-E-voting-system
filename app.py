@@ -21,8 +21,9 @@ from flask import (
     session,
     url_for,
 )
+import time
 
-from blockchain import Blockchain, generate_private_key
+from blockchain import Blockchain, generate_rsa_keypair, rsa_sign, rsa_verify, sha256
 
 # ------------------------------------------------------------------ #
 #  App Configuration
@@ -247,6 +248,11 @@ def audit():
     return render_template("audit.html")
 
 
+@app.route("/zkp")
+def zkp():
+    """Zero-Knowledge Proof demonstration page."""
+    return render_template("zkp.html")
+
 # ------------------------------------------------------------------ #
 #  API Endpoints
 # ------------------------------------------------------------------ #
@@ -328,22 +334,36 @@ def api_send_private_key():
     data = request.get_json()
     email = data.get("email", session.get("otp_email", ""))
 
-    private_key = generate_private_key()
+    keypair = generate_rsa_keypair(128)
+    private_key = keypair["private"]
+    public_key = keypair["public"]
     session["private_key"] = private_key
+    session["public_key"] = public_key
 
     body = f"""
     <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;
                 background:#0a0a1a;color:#e0e0ff;padding:30px;border-radius:12px;">
-      <h2 style="color:#00ff88;">🔑 Your Voting Private Key</h2>
-      <p>Use this private key to authenticate and submit your vote:</p>
-      <div style="background:#1a1a3e;padding:20px;border-radius:8px;
-                  text-align:center;font-size:20px;letter-spacing:4px;
+      <h2 style="color:#00ff88;">🔑 Your Voting RSA Keys</h2>
+      <p>Use this private key to authenticate and submit your vote. Your public key is stored for verification.</p>
+      
+      <p style="margin:0 0 5px 0;font-size:11px;color:#7090b0;letter-spacing:1px;">PRIVATE KEY (Keep Secret)</p>
+      <div style="background:#1a1a3e;padding:15px;border-radius:8px;
+                  text-align:center;font-size:14px;letter-spacing:2px;
                   color:#00ff88;font-weight:bold;border:1px solid #00ff88;
-                  word-break:break-all;">
+                  word-break:break-all;margin-bottom:15px;">
         {private_key}
       </div>
+
+      <p style="margin:0 0 5px 0;font-size:11px;color:#7090b0;letter-spacing:1px;">PUBLIC KEY</p>
+      <div style="background:#1a1a3e;padding:15px;border-radius:8px;
+                  text-align:center;font-size:14px;letter-spacing:2px;
+                  color:#00d4ff;font-weight:bold;border:1px solid #00d4ff;
+                  word-break:break-all;">
+        {public_key}
+      </div>
+      
       <p style="font-size:13px;color:#888;margin-top:20px;">
-        ⚠️ Keep this key private. Anyone with this key can cast your vote.
+        ⚠️ Keep the private key secret. Anyone with this key can cast your vote.
       </p>
       <p style="font-size:11px;color:#555;">
         Educational simulation only. Not for real elections.
@@ -368,14 +388,15 @@ def api_cast_vote():
     entered_key = data.get("private_key", "").strip()
 
     aadhaar = session.get("aadhaar")
-    stored_key = session.get("private_key")
+    stored_priv_key = session.get("private_key")
+    stored_pub_key = session.get("public_key")
 
     if not aadhaar:
         return jsonify({"success": False, "message": "Session expired. Re-authenticate."})
-    if not stored_key:
-        return jsonify({"success": False, "message": "No private key found. Generate one first."})
-    if entered_key.upper() != stored_key.upper():
-        return jsonify({"success": False, "message": "Invalid private key."})
+    if not stored_priv_key or not stored_pub_key:
+        return jsonify({"success": False, "message": "No RSA keys found. Generate them first."})
+    if entered_key != stored_priv_key:
+        return jsonify({"success": False, "message": "Invalid RSA private key."})
 
     user = find_user(aadhaar)
     if user and user.get("voted"):
@@ -385,8 +406,18 @@ def api_cast_vote():
     if party not in valid_parties:
         return jsonify({"success": False, "message": "Invalid party selection."})
 
+    # Prepare Ballot
+    ballot_payload = json.dumps({"aadhaar": aadhaar, "party": party, "ts": time.time()}, sort_keys=True)
+    ballot_hash = sha256(ballot_payload)
+    
+    # Asymmetric RSA Signing
+    try:
+        signature = rsa_sign(ballot_hash, entered_key)
+    except Exception as e:
+        return jsonify({"success": False, "message": "Failed to create RSA signature."})
+
     # Add to blockchain pending transactions
-    result = blockchain.add_vote_transaction(aadhaar, party, stored_key)
+    result = blockchain.add_vote_transaction(aadhaar, party, stored_pub_key, signature, ballot_hash)
     mark_voted(aadhaar)
 
     # Send dynamic email with ballot hash and signature
@@ -428,6 +459,7 @@ def api_cast_vote():
 
     # Clear sensitive session data
     session.pop("private_key", None)
+    session.pop("public_key", None)
     session.pop("otp_verified", None)
 
     return jsonify(

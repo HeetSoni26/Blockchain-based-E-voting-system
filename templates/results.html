@@ -53,7 +53,44 @@
     border-radius:8px;color:var(--text2);font-size:.85rem;
     display:flex;align-items:center;gap:.6rem;
   }
+  
+  .charts-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+  }
+  
+  @media(min-width: 768px) {
+    .charts-container {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  
+  .chart-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 350px;
+  }
+  
+  .chart-card h3 {
+    font-family: 'Rajdhani', sans-serif;
+    color: #fff;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    align-self: flex-start;
+    width: 100%;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+  }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -81,17 +118,28 @@
     </div>
 
     {% set parties = [
-      ('BJP','🪷','Bharatiya Janata Party'),
-      ('Congress','✋','Indian National Congress'),
-      ('AAP','🧹','Aam Aadmi Party'),
-      ('NOTA','✖️','None of the Above'),
-      ('Independent','🏛️','Independent Candidate')
+      ('BJP','🪷','Bharatiya Janata Party', '#ff9933'),
+      ('Congress','✋','Indian National Congress', '#00d4ff'),
+      ('AAP','🧹','Aam Aadmi Party', '#00ff88'),
+      ('NOTA','✖️','None of the Above', '#888888'),
+      ('Independent','🏛️','Independent Candidate', '#a050ff')
     ] %}
 
     {% set max_votes = counts.values()|max if total > 0 else 1 %}
 
+    <div class="charts-container">
+      <div class="chart-card">
+        <h3>Vote Distribution</h3>
+        <canvas id="doughnutChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Vote Count by Party</h3>
+        <canvas id="barChart"></canvas>
+      </div>
+    </div>
+
     <div class="party-results" id="partyResults">
-      {% for key, icon, fullname in parties %}
+      {% for key, icon, fullname, color in parties %}
       {% set v = counts.get(key, 0) %}
       {% set pct = (v / total * 100)|round(1) if total > 0 else 0 %}
       {% set is_winner = (v == max_votes and total > 0 and v > 0) %}
@@ -113,7 +161,7 @@
           </div>
         </div>
         <div class="progress-bar-wrap">
-          <div class="progress-bar" style="--target:{{ pct }}%"></div>
+          <div class="progress-bar" style="--target:{{ pct }}%; background: linear-gradient(90deg, {{ color }}, {{ color }}88);"></div>
         </div>
       </div>
       {% endfor %}
@@ -129,6 +177,72 @@
 
 {% block extra_js %}
 <script>
+  // Setup Chart.js defaults for dark theme
+  Chart.defaults.color = '#7090b0';
+  Chart.defaults.font.family = "'Exo 2', sans-serif";
+
+  const rawData = {
+    {% for key, icon, fullname, color in parties %}
+    "{{ key }}": { count: {{ counts.get(key, 0) }}, color: "{{ color }}" }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  };
+
+  const labels = Object.keys(rawData);
+  const dataValues = labels.map(l => rawData[l].count);
+  const colors = labels.map(l => rawData[l].color);
+  
+  // Doughnut Chart
+  const ctxDoughnut = document.getElementById('doughnutChart').getContext('2d');
+  new Chart(ctxDoughnut, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: dataValues,
+        backgroundColor: colors,
+        borderColor: '#04060f',
+        borderWidth: 2,
+        hoverOffset: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 15, font: { size: 12 } } }
+      },
+      cutout: '70%'
+    }
+  });
+
+  // Bar Chart
+  const ctxBar = document.getElementById('barChart').getContext('2d');
+  new Chart(ctxBar, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Votes',
+        data: dataValues,
+        backgroundColor: colors.map(c => c + 'aa'),
+        borderColor: colors,
+        borderWidth: 1,
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1, color: '#7090b0' }, grid: { color: '#1a3050' } },
+        x: { grid: { display: false }, ticks: { color: '#7090b0' } }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+
   // Animate progress bars on load
   setTimeout(()=>{
     document.querySelectorAll('.progress-bar').forEach(bar=>{
