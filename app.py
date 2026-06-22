@@ -203,7 +203,11 @@ def results():
     counts = blockchain.get_vote_counts()
     regional_counts = blockchain.get_regional_counts()
     total = blockchain.get_total_votes()
-    stats = blockchain.get_chain_status()
+    stats = {
+        "blocks": len(blockchain.chain),
+        "pending": len(blockchain.pending_transactions),
+        "total_votes": total
+    }
     return render_template("results.html", counts=counts, regional_counts=regional_counts, total=total, stats=stats)
 
 
