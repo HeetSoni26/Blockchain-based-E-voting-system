@@ -44,11 +44,12 @@ graph TD
 ### 🔒 Core Pillars of the Architecture
 
 *   **Cryptographic Immutability:** Votes are chained chronologically using SHA-256 hashes. Each block contains the hash of the previous block, creating a chain where any retro-active modification invalidates all subsequent block hashes.
+*   **Zero-Knowledge Proofs (ZKP) & Biometrics:** To comply with privacy standards, BlockVote stores the SHA-256 hash of the voter's Aadhaar number (`aadhaar_hash`), rather than the raw Aadhaar. An interactive ZKP simulator is included to demonstrate how age and eligibility are verified without revealing exact birthdates. The frontend also integrates a state-of-the-art **Simulated Biometric Authentication** flow (retina/fingerprint scan) to tie physical identity to the digital wallet.
+*   **Asymmetric RSA Cryptography:** Each voter generates a secure RSA Public/Private keypair. The ballot is signed using the voter's private key, and the signature is verified by the blockchain nodes using the public key before being accepted.
 *   **Merkle Tree Transaction Verification:** Instead of hashing transactions linearly, BlockVote computes a Merkle Root. This allows logarithmic verification of whether a specific ballot is present in a block, dramatically optimizing space and audit speed.
-*   **Zero-Knowledge Voter Privacy:** To comply with privacy standards, BlockVote stores the SHA-256 hash of the voter's Aadhaar number (`aadhaar_hash`), rather than the raw Aadhaar. This prevents double-voting by matching hashes, while making it impossible to reverse-engineer the voter's identity from the blockchain.
-*   **Proof-of-Work Consensus:** Blocks are added to the chain only after a mining simulation resolves a computational puzzle (finding a nonce that produces a block hash with 4 leading zeros). This represents the resource cost required to secure a distributed ledger against spam and rewrite attacks.
-*   **Dynamic Dual-Factor Verification & Receipts:** Integrates SMTP to deliver One-Time Passwords (OTPs) and private keys dynamically to the voter. Upon casting, an automated HTML email receipt containing the unique `ballot_hash` and `signature` is sent to the voter.
-*   **Interactive Simulation Dashboard:** To prove the resilience of the blockchain, administrators can manually tamper with votes (changing parties in mined blocks) and watch the validation engine immediately flag the ledger as compromised. The system can then trigger a self-healing protocol to restore chain integrity from a secure backup.
+*   **Proof-of-Work Consensus & Live P2P Sync:** Blocks are added to the chain only after a mining simulation resolves a computational puzzle (finding a nonce that produces a block hash with 4 leading zeros). The application features **Live Network Polling** via WebSockets/setInterval, meaning when a block is mined on one client, it instantly syncs across all other connected clients, simulating a true decentralized P2P network.
+*   **Dynamic Dual-Factor Verification & PDF Receipts:** Integrates SMTP to deliver One-Time Passwords (OTPs) and private keys dynamically to the voter. Upon casting, an automated HTML email receipt containing the unique `ballot_hash` and `signature` is sent to the voter. Furthermore, voters can download a **Professional PDF Receipt containing a QR Code** of their ballot hash to independently audit their vote in the ledger.
+*   **Regional Analytics & Interactive Dashboard:** Features a comprehensive dashboard with Chart.js visualizations, including a **Regional Turnout Breakdown** that proves the system's capability to handle and analyze nation-wide state-level election data securely. Administrators can manually tamper with votes (changing parties in mined blocks) and watch the validation engine immediately flag the ledger as compromised.
 
 ---
 
@@ -109,7 +110,7 @@ def mine_pending_transactions(self) -> dict:
 ## 📈 6. Future Roadmap
 
 1. **Decentralized Node Consensus:** Upgrade from a single simulator to a distributed peer-to-peer network utilizing gRPC and Raft/PBFT consensus.
-2. **Zero-Knowledge Proofs (ZK-SNARKs):** Implement ZK-SNARKs to mathematically prove a voter's eligibility and that their vote was counted without revealing the Aadhaar hash on the public ledger.
+2. **On-Chain Zero-Knowledge Rollups (zk-Rollups):** Transition the currently simulated ZKP age verification into mathematical zk-SNARKs computed fully on-chain to scale transaction throughput.
 3. **Decentralized Identity (DID):** Transition from Aadhaar hashing to W3C-compliant DIDs to provide global, self-sovereign authentication.
 4. **Smart Contract Integration:** Deploy the logic onto Ethereum/Solidity or Hyperledger Fabric to enable immutable, automated voting rules.
 

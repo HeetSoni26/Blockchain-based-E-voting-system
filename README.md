@@ -83,7 +83,13 @@ evoting/
 - **Proof-of-Work mining** (4 leading zeros required)
 - **Merkle Root** generation from transactions
 - **Chain validation** on every page load
-- **Cryptographic ballot hashing** and signing
+- **Cryptographic ballot hashing** and pure-Python RSA asymmetric signing
+- **Zero-Knowledge Proof (ZKP) Simulator** for voter age verification
+- **Live P2P Network Polling** to auto-sync blocks across clients
+- **Regional Analytics Dashboard** mapping vote turnout by state
+- **Professional PDF Receipts** with scannable QR Codes for mathematical vote auditing
+- **Futuristic Biometric Auth Simulation** (retina/fingerprint styling)
+- **Secure Admin Panel** protected by verified OTP for ledger resets
 
 ---
 
