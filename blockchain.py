@@ -236,7 +236,7 @@ class Blockchain:
     #  Voting helpers
     # ------------------------------------------------------------------ #
 
-    def add_vote_transaction(self, aadhaar: str, party: str, public_key: str, signature: str, ballot_hash: str) -> dict:
+    def add_vote_transaction(self, aadhaar: str, party: str, region: str, public_key: str, signature: str, ballot_hash: str) -> dict:
         """
         Add an externally signed vote as a pending transaction.
         """
@@ -245,6 +245,7 @@ class Blockchain:
             "signature": signature,
             "public_key": public_key,
             "party": party,
+            "region": region,
             "aadhaar_hash": sha256(aadhaar),  # Never store raw Aadhaar
             "timestamp": datetime.utcnow().isoformat() + "Z",
         }
@@ -328,14 +329,27 @@ class Blockchain:
     # ------------------------------------------------------------------ #
 
     def get_vote_counts(self) -> dict:
-        """Tally votes from all mined blocks."""
-        parties = {"BJP": 0, "Congress": 0, "AAP": 0, "NOTA": 0, "Independent": 0}
-        for block in self.chain[1:]:  # Skip genesis
+        """Tally all valid votes in mined blocks."""
+        counts = {}
+        for block in self.chain[1:]:
             for tx in block.get("transactions", []):
                 party = tx.get("party")
-                if party in parties:
-                    parties[party] += 1
-        return parties
+                if party:
+                    counts[party] = counts.get(party, 0) + 1
+        return counts
+
+    def get_regional_counts(self) -> dict:
+        """Aggregate valid votes by region and party from mined blocks."""
+        regional = {}
+        for block in self.chain[1:]:
+            for tx in block.get("transactions", []):
+                party = tx.get("party")
+                region = tx.get("region", "Unknown")
+                if party:
+                    if region not in regional:
+                        regional[region] = {}
+                    regional[region][party] = regional[region].get(party, 0) + 1
+        return regional
 
     def get_total_votes(self) -> int:
         return sum(self.get_vote_counts().values())

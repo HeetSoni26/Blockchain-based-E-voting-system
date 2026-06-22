@@ -105,6 +105,21 @@
     .hero h1{font-size:2.2rem}
   }
 </style>
+<script>
+  // Live Polling
+  let lastBlockCount = {{ stats.blocks|default('null') }};
+  setInterval(async () => {
+    try {
+      const res = await fetch('/api/chain_status');
+      const data = await res.json();
+      if (lastBlockCount !== null && (data.blocks > lastBlockCount || data.pending !== {{ stats.pending }})) {
+        window.location.reload();
+      } else if (lastBlockCount === null) {
+        lastBlockCount = data.blocks;
+      }
+    } catch(e) {}
+  }, 5000);
+</script>
 {% endblock %}
 
 {% block content %}

@@ -245,5 +245,19 @@
       el.style.display = 'none';
     }
   }
+
+  // Live Polling
+  let lastBlockCount = {{ chain|length }};
+  setInterval(async () => {
+    try {
+      const res = await fetch('/api/chain_status');
+      const data = await res.json();
+      if (lastBlockCount !== null && data.blocks > lastBlockCount) {
+        window.location.reload();
+      } else if (lastBlockCount === null) {
+        lastBlockCount = data.blocks;
+      }
+    } catch(e) {}
+  }, 5000);
 </script>
 {% endblock %}

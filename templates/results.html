@@ -127,6 +127,15 @@
 
     {% set max_votes = counts.values()|max if total > 0 else 1 %}
 
+    <div class="charts-container" style="grid-template-columns: 1fr;">
+      <div class="chart-card">
+        <h3>Regional Analytics (Votes by State/Region)</h3>
+        <div style="position: relative; height: 350px; width: 100%;">
+          <canvas id="regionalChart"></canvas>
+        </div>
+      </div>
+    </div>
+
     <div class="charts-container">
       <div class="chart-card">
         <h3>Vote Distribution</h3>
@@ -247,6 +256,42 @@
     }
   });
 
+  // Regional Chart Data Preparation
+  const regionalRaw = {{ regional_counts|tojson|safe }};
+  const regions = Object.keys(regionalRaw);
+  const regionalDatasets = [];
+  
+  labels.forEach((party, i) => {
+    const dataForParty = regions.map(r => regionalRaw[r][party] || 0);
+    regionalDatasets.push({
+      label: party,
+      data: dataForParty,
+      backgroundColor: colors[i] + 'aa',
+      borderColor: colors[i],
+      borderWidth: 1
+    });
+  });
+
+  const ctxRegional = document.getElementById('regionalChart').getContext('2d');
+  new Chart(ctxRegional, {
+    type: 'bar',
+    data: {
+      labels: regions.length > 0 ? regions : ["No Data Yet"],
+      datasets: regions.length > 0 ? regionalDatasets : []
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { color: '#7090b0' } },
+        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1, color: '#7090b0' }, grid: { color: '#1a3050' } }
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#7090b0' } }
+      }
+    }
+  });
+
   // Animate progress bars on load
   setTimeout(()=>{
     document.querySelectorAll('.progress-bar').forEach(bar=>{
@@ -254,5 +299,19 @@
       bar.style.width = pct + '%';
     });
   }, 200);
+
+  // Live Polling
+  let lastBlockCount = {{ stats.blocks|default('null') }};
+  setInterval(async () => {
+    try {
+      const res = await fetch('/api/chain_status');
+      const data = await res.json();
+      if (lastBlockCount !== null && data.blocks > lastBlockCount) {
+        window.location.reload();
+      } else if (lastBlockCount === null) {
+        lastBlockCount = data.blocks;
+      }
+    } catch(e) {}
+  }, 5000);
 </script>
 {% endblock %}

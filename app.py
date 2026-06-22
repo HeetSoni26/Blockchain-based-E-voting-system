@@ -201,8 +201,9 @@ def vote():
 def results():
     """Vote count results page."""
     counts = blockchain.get_vote_counts()
+    regional_counts = blockchain.get_regional_counts()
     total = blockchain.get_total_votes()
-    return render_template("results.html", counts=counts, total=total)
+    return render_template("results.html", counts=counts, regional_counts=regional_counts, total=total)
 
 
 @app.route("/mining")
@@ -417,7 +418,8 @@ def api_cast_vote():
         return jsonify({"success": False, "message": "Failed to create RSA signature."})
 
     # Add to blockchain pending transactions
-    result = blockchain.add_vote_transaction(aadhaar, party, stored_pub_key, signature, ballot_hash)
+    user_region = user.get("region", "Unknown") if user else "Unknown"
+    result = blockchain.add_vote_transaction(aadhaar, party, user_region, stored_pub_key, signature, ballot_hash)
     mark_voted(aadhaar)
 
     # Send dynamic email with ballot hash and signature

@@ -278,8 +278,9 @@
           </div>
         </div>
 
+        <div id="qrcode-container" style="display:none;"></div>
         <button class="btn btn-primary" id="btnDownloadReceipt" style="width: 100%; margin-top: 1.5rem; justify-content: center; display: none;" onclick="downloadReceipt()">
-          📄 Download Official Cryptographic Receipt
+          📄 Download Official Cryptographic Receipt (PDF)
         </button>
       </div>
       
@@ -289,6 +290,9 @@
     </div>
   </div>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 {% endblock %}
 
 {% block extra_js %}
@@ -436,33 +440,104 @@
     const ts = document.getElementById('res-timestamp').textContent;
     const merkle = document.getElementById('res-merkleroot').textContent;
     
-    const content = `
-==================================================
-        BLOCKVOTE OFFICIAL RECEIPT
-==================================================
-
-STATUS:        SEALED & SECURED
-BLOCK ID:      ${block}
-TIMESTAMP:     ${ts}
-
---- CRYPTOGRAPHIC PROOFS ---
-BALLOT HASH:   ${hash}
-RSA SIGNATURE: ${sig}
-MERKLE ROOT:   ${merkle}
-
-==================================================
-This receipt provides mathematical proof that your 
-vote was cast, securely signed with your asymmetric
-private key, and sealed within the immutable ledger.
-==================================================
-    `;
+    // Generate QR Code
+    const qrContainer = document.getElementById('qrcode-container');
+    qrContainer.innerHTML = ''; // clear previous
+    new QRCode(qrContainer, {
+      text: hash,
+      width: 128,
+      height: 128,
+      colorDark : "#000000",
+      colorLight : "#ffffff",
+      correctLevel : QRCode.CorrectLevel.L
+    });
     
-    const blob = new Blob([content], { type: 'text/plain' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `BlockVote_Receipt_${hash.substring(0, 8)}.txt`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    setTimeout(() => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      doc.setFillColor(4, 6, 15);
+      doc.rect(0, 0, 210, 297, "F");
+      
+      doc.setTextColor(0, 212, 255);
+      doc.setFontSize(22);
+      doc.setFont("helvetica", "bold");
+      doc.text("BLOCKVOTE", 105, 30, null, null, "center");
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.text("OFFICIAL CRYPTOGRAPHIC RECEIPT", 105, 45, null, null, "center");
+      
+      doc.setDrawColor(0, 212, 255);
+      doc.line(20, 55, 190, 55);
+      
+      doc.setFontSize(12);
+      doc.setTextColor(150, 150, 150);
+      doc.text("STATUS:", 20, 75);
+      doc.setTextColor(0, 255, 136);
+      doc.text("SEALED & SECURED", 60, 75);
+      
+      doc.setTextColor(150, 150, 150);
+      doc.text("BLOCK ID:", 20, 85);
+      doc.setTextColor(255, 255, 255);
+      doc.text(block, 60, 85);
+      
+      doc.setTextColor(150, 150, 150);
+      doc.text("TIMESTAMP:", 20, 95);
+      doc.setTextColor(255, 255, 255);
+      doc.text(ts, 60, 95);
+      
+      doc.line(20, 105, 190, 105);
+      
+      doc.setTextColor(0, 212, 255);
+      doc.text("--- CRYPTOGRAPHIC PROOFS ---", 105, 115, null, null, "center");
+      
+      doc.setFontSize(10);
+      doc.setTextColor(150, 150, 150);
+      doc.text("BALLOT HASH:", 20, 130);
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("courier", "normal");
+      doc.text(hash, 20, 135);
+      
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(150, 150, 150);
+      doc.text("RSA SIGNATURE:", 20, 150);
+      doc.setTextColor(0, 255, 136);
+      doc.setFont("courier", "normal");
+      // Split sig into lines to fit
+      const splitSig = doc.splitTextToSize(sig, 170);
+      doc.text(splitSig, 20, 155);
+      
+      let sigHeight = splitSig.length * 5;
+      
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(150, 150, 150);
+      doc.text("MERKLE ROOT:", 20, 165 + sigHeight);
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("courier", "normal");
+      doc.text(merkle, 20, 170 + sigHeight);
+      
+      doc.line(20, 185 + sigHeight, 190, 185 + sigHeight);
+      
+      // QR Code
+      const qrCanvas = qrContainer.querySelector('canvas');
+      if(qrCanvas) {
+        const qrImg = qrCanvas.toDataURL('image/png');
+        doc.addImage(qrImg, 'PNG', 85, 200 + sigHeight, 40, 40);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text("SCAN TO VERIFY BALLOT", 105, 245 + sigHeight, null, null, "center");
+      }
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text("This receipt provides mathematical proof that your vote was cast,", 105, 265 + sigHeight, null, null, "center");
+      doc.text("securely signed with your asymmetric private key, and sealed", 105, 270 + sigHeight, null, null, "center");
+      doc.text("within the immutable ledger.", 105, 275 + sigHeight, null, null, "center");
+      
+      doc.save(`BlockVote_Receipt_${hash.substring(0, 8)}.pdf`);
+    }, 500); // short delay to let QR code render
   }
 </script>
 {% endblock %}

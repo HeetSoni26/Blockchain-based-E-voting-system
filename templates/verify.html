@@ -119,6 +119,31 @@
     background:rgba(255,107,53,.08);border:1px solid rgba(255,107,53,.2);
     border-radius:6px;margin-top:.5rem;
   }
+
+  /* ---- Biometric Scan Sim ---- */
+  .bio-overlay {
+    position: fixed; inset: 0; background: rgba(4,6,15,0.95);
+    z-index: 1000; display: none; flex-direction: column;
+    align-items: center; justify-content: center; backdrop-filter: blur(5px);
+  }
+  .bio-overlay.show { display: flex; }
+  .bio-scanner {
+    width: 120px; height: 150px; position: relative;
+    border: 2px solid rgba(0, 212, 255, 0.2); border-radius: 20px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300d4ff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12C2 17.523 6.477 22 12 22s10-4.477 10-10S17.523 2 12 2 2 6.477 2 12z' opacity='0.2'/%3E%3Cpath d='M8 12a4 4 0 0 1 8 0'/%3E%3Cpath d='M6 12a6 6 0 0 1 12 0'/%3E%3Cpath d='M4 12a8 8 0 0 1 16 0'/%3E%3Cpath d='M12 8v4'/%3E%3Cpath d='M12 16h.01'/%3E%3C/svg%3E") center no-repeat;
+    background-size: contain; overflow: hidden; box-shadow: 0 0 30px rgba(0,212,255,0.1);
+  }
+  .bio-laser {
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: #00ff88; box-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88;
+    animation: scan 1.5s ease-in-out infinite alternate;
+  }
+  @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
+  .bio-text {
+    margin-top: 1.5rem; font-family: 'Share Tech Mono', monospace;
+    font-size: 1.2rem; color: #00d4ff; letter-spacing: 2px;
+  }
+  .bio-success { color: #00ff88; display: none; }
 </style>
 {% endblock %}
 
@@ -256,6 +281,15 @@
   <input type="hidden" id="aadhaarVal" value="{{ user.aadhaar }}"/>
   {% endif %}
 </div>
+
+<!-- Biometric Simulation Overlay -->
+<div class="bio-overlay" id="bioOverlay">
+  <div class="bio-scanner" id="bioScanner">
+    <div class="bio-laser" id="bioLaser"></div>
+  </div>
+  <div class="bio-text" id="bioText">SCANNING BIOMETRICS...</div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -277,6 +311,27 @@
     const email = document.getElementById('userEmail').value;
     const aadhaar = document.getElementById('aadhaarVal').value;
     const btn = document.getElementById('sendOtpBtn');
+    
+    // Simulate Biometric Scan
+    const overlay = document.getElementById('bioOverlay');
+    const text = document.getElementById('bioText');
+    const laser = document.getElementById('bioLaser');
+    overlay.classList.add('show');
+    text.textContent = "INITIALIZING BIOMETRIC LINK...";
+    text.style.color = "#00d4ff";
+    laser.style.display = "block";
+    
+    await new Promise(r => setTimeout(r, 800));
+    text.textContent = "SCANNING RETINA / FINGERPRINT...";
+    
+    await new Promise(r => setTimeout(r, 1500));
+    laser.style.display = "none";
+    text.textContent = "BIOMETRIC MATCH FOUND ✅";
+    text.style.color = "#00ff88";
+    
+    await new Promise(r => setTimeout(r, 800));
+    overlay.classList.remove('show');
+    
     btn.disabled = true;
     btn.textContent = '⏳ Sending...';
 
