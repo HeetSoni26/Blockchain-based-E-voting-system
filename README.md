@@ -96,3 +96,9 @@ evoting/
 ## ⚠️ Disclaimer
 
 This is an **educational simulation only** — not for use in real elections.
+
+---
+
+## 🏆 GitHub Badges
+
+This repository is also used for earning GitHub achievement badges.
