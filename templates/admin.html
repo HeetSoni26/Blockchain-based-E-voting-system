@@ -210,6 +210,56 @@
         </div>
       </div>
       
+      <!-- SMTP Email Configuration & Diagnostics Panel -->
+      <div class="panel-card" style="border-color:rgba(0,212,255,0.25)">
+        <h3 style="color:var(--accent)">📧 SMTP Email Configuration & Diagnostics</h3>
+        <p style="color:var(--text2);font-size:0.85rem;margin-bottom:1rem">
+          Manage Gmail SMTP credentials for sending voter OTPs and RSA Private Keys.
+        </p>
+
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:0.9rem;margin-bottom:1rem;">
+          <div style="font-size:0.78rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.3rem;">CURRENT CONFIGURED SENDER</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:0.95rem;color:var(--accent);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+            <span>{{ smtp_email }}</span>
+            <span id="smtpLiveBadge" class="chain-badge" style="font-size:0.7rem;">READY TO TEST</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0.6rem">
+          <label style="font-size:0.75rem;letter-spacing:1px;color:var(--text2);text-transform:uppercase;">GMAIL ADDRESS</label>
+          <input type="email" id="smtpEmailInput" class="form-control" value="{{ smtp_email }}" placeholder="e.g. minerminer11110@gmail.com" style="width:100%"/>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0.8rem">
+          <label style="font-size:0.75rem;letter-spacing:1px;color:var(--text2);text-transform:uppercase;">16-CHARACTER GOOGLE APP PASSWORD</label>
+          <input type="password" id="smtpPasswordInput" class="form-control" placeholder="Enter 16-character Google App Password" style="width:100%"/>
+        </div>
+
+        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">
+          <button type="button" class="btn btn-outline" style="flex:1;" id="testSmtpBtn" onclick="testSmtpConnection()">
+            🔍 Test Connection
+          </button>
+          <button type="button" class="btn btn-primary" style="flex:1;" id="saveSmtpBtn" onclick="saveSmtpSettings()">
+            💾 Save Credentials
+          </button>
+        </div>
+
+        <!-- Diagnostic Output Pane -->
+        <div id="smtpDiagResult" style="display:none;padding:0.75rem 1rem;border-radius:8px;font-size:0.83rem;margin-bottom:1rem;line-height:1.4;"></div>
+
+        <!-- Help instructions -->
+        <details style="background:rgba(255,255,255,0.02);border:1px dashed var(--border);border-radius:8px;padding:0.6rem 0.8rem;font-size:0.8rem;color:var(--text2);">
+          <summary style="cursor:pointer;color:var(--accent2);font-weight:600;">📖 How to create a Google App Password (Step-by-Step)</summary>
+          <ol style="margin-left:1.2rem;margin-top:0.5rem;line-height:1.6;">
+            <li>Go to <a href="https://myaccount.google.com/security" target="_blank" style="color:var(--accent);">Google Account Security</a>.</li>
+            <li>Ensure <strong>2-Step Verification</strong> is turned <strong>ON</strong>.</li>
+            <li>Open <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:var(--accent);">App Passwords</a> (search "App passwords" in settings if hidden).</li>
+            <li>Give it an App name (e.g. <code>BlockVote</code>) and click <strong>Create</strong>.</li>
+            <li>Copy the 16-letter code (e.g. <code>abcd efgh ijkl mnop</code>) and paste it here!</li>
+          </ol>
+        </details>
+      </div>
+
       <!-- Global Controls -->
       <div class="panel-card" style="border-color:rgba(255,51,85,0.2)">
         <h3 style="color:var(--accent3)">⚙️ Emergency System Controls</h3>
@@ -217,7 +267,7 @@
           Wipe the blockchain file (`blockchain.json`) and reset all voter statuses to `NOT VOTED` for testing.
         </p>
         <div id="resetRequestSection">
-          <input type="email" id="adminEmail" class="form-control" placeholder="Admin Email (minerminer11110@gmail.com)" style="margin-bottom:0.8rem; width:100%">
+          <input type="email" id="adminEmail" class="form-control" value="{{ smtp_email }}" placeholder="Admin Email ({{ smtp_email }})" style="margin-bottom:0.8rem; width:100%">
           <button class="btn btn-danger" onclick="requestAdminResetOTP()" style="width:100%">
             🚨 Request Reset OTP
           </button>
@@ -384,14 +434,92 @@
     }
   }
   
+  async function testSmtpConnection() {
+    const email = document.getElementById('smtpEmailInput').value.trim();
+    const password = document.getElementById('smtpPasswordInput').value.trim();
+    const btn = document.getElementById('testSmtpBtn');
+    const diag = document.getElementById('smtpDiagResult');
+    const badge = document.getElementById('smtpLiveBadge');
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Testing SMTP...';
+    diag.style.display = 'block';
+    diag.style.background = 'rgba(0,212,255,0.1)';
+    diag.style.border = '1px solid var(--accent)';
+    diag.style.color = 'var(--text)';
+    diag.textContent = 'Connecting to Google SMTP (smtp.gmail.com:587/465)...';
+
+    try {
+      const r = await fetch('/api/test_smtp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const d = await r.json();
+      btn.disabled = false;
+      btn.textContent = '🔍 Test Connection';
+
+      if(d.success) {
+        diag.style.background = 'rgba(0,255,136,0.1)';
+        diag.style.border = '1px solid var(--accent2)';
+        diag.style.color = 'var(--accent2)';
+        diag.innerHTML = '<strong>✅ SUCCESS:</strong> ' + d.message;
+        badge.textContent = 'CONNECTED';
+        badge.style.color = 'var(--accent2)';
+        badge.style.borderColor = 'rgba(0,255,136,0.3)';
+      } else {
+        diag.style.background = 'rgba(255,51,85,0.12)';
+        diag.style.border = '1px solid var(--accent3)';
+        diag.style.color = '#ff99aa';
+        diag.innerHTML = '<strong>❌ FAILED:</strong> ' + d.message;
+        badge.textContent = 'AUTH FAILED';
+        badge.style.color = 'var(--accent3)';
+        badge.style.borderColor = 'rgba(255,51,85,0.4)';
+      }
+    } catch(err) {
+      btn.disabled = false;
+      btn.textContent = '🔍 Test Connection';
+      diag.style.background = 'rgba(255,51,85,0.12)';
+      diag.style.border = '1px solid var(--accent3)';
+      diag.style.color = '#ff99aa';
+      diag.innerHTML = '<strong>❌ Network/Server Error:</strong> ' + err.message;
+    }
+  }
+
+  async function saveSmtpSettings() {
+    const email = document.getElementById('smtpEmailInput').value.trim();
+    const password = document.getElementById('smtpPasswordInput').value.trim();
+    const btn = document.getElementById('saveSmtpBtn');
+
+    if(!email || !password) {
+      alert('Please enter both Gmail address and 16-character App Password.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Saving...';
+
+    const r = await fetch('/api/save_smtp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const d = await r.json();
+    btn.disabled = false;
+    btn.textContent = '💾 Save Credentials';
+
+    if(d.success) {
+      alert('✅ ' + d.message);
+      window.location.reload();
+    } else {
+      alert('❌ ' + d.message);
+    }
+  }
+
   async function requestAdminResetOTP() {
     const email = document.getElementById('adminEmail').value.trim();
     if(!email) {
       alert('Please enter the admin email.');
-      return;
-    }
-    if(email !== 'minerminer11110@gmail.com') {
-      alert('Access Denied. Only the authorized admin email can perform this action.');
       return;
     }
     const r = await fetch('/api/admin_reset_otp', { 
@@ -403,7 +531,12 @@
     if(d.success) {
       document.getElementById('resetRequestSection').style.display = 'none';
       document.getElementById('resetOtpSection').style.display = 'block';
-      alert('OTP sent to admin email. Please check your inbox.');
+      if(d.demo_otp) {
+        document.getElementById('adminOtp').value = d.demo_otp;
+        alert('⚠️ ' + d.message);
+      } else {
+        alert('OTP sent to admin email. Please check your inbox.');
+      }
     } else {
       alert(d.message);
     }

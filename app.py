@@ -33,8 +33,8 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "evoting_secret_2024_blockchain")
 
 # Email config — update with real SMTP credentials for live demo
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
+SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
 if os.environ.get("VERCEL"):
     SMTP_CONFIG_FILE = "/tmp/smtp_config.json"
     orig_smtp = os.path.join(os.path.dirname(__file__), "smtp_config.json")
@@ -48,19 +48,26 @@ else:
     SMTP_CONFIG_FILE = os.path.join(os.path.dirname(__file__), "smtp_config.json")
 
 def load_smtp_config():
-    """Load dynamic SMTP configuration or fallback to env vars."""
+    """Load dynamic SMTP configuration: env vars take priority, then file."""
+    env_email = os.environ.get("SMTP_EMAIL", "").strip()
+    env_password = os.environ.get("SMTP_PASSWORD", "").replace(" ", "").strip()
+    if env_email and env_password and env_email != "your_email@gmail.com":
+        return env_email, env_password
+
     if os.path.exists(SMTP_CONFIG_FILE):
         try:
             with open(SMTP_CONFIG_FILE, "r") as f:
                 data = json.load(f)
                 email = data.get("smtp_email", "").strip()
                 password = data.get("smtp_password", "").replace(" ", "").strip()
-                return email, password
+                if email and email != "your_email@gmail.com":
+                    return email, password
         except Exception:
             pass
+
     return (
-        os.environ.get("SMTP_EMAIL", "your_email@gmail.com").strip(),
-        os.environ.get("SMTP_PASSWORD", "your_app_password").replace(" ", "").strip()
+        env_email or "minerminer11110@gmail.com",
+        env_password or os.environ.get("SMTP_PASSWORD", "").replace(" ", "").strip()
     )
 
 def save_smtp_config(email, password):
@@ -127,13 +134,27 @@ blockchain = Blockchain()
 #  Email utility
 # ------------------------------------------------------------------ #
 
-def send_email(to_addr: str, subject: str, body_html: str) -> bool:
-    """Send an HTML email. Returns True on success, False on failure."""
+class EmailResult:
+    """Wraps email sending outcome, boolean-evaluable and tuple-unpackable."""
+    def __init__(self, success: bool, message: str):
+        self.success = success
+        self.message = message
+
+    def __bool__(self):
+        return bool(self.success)
+
+    def __iter__(self):
+        return iter((self.success, self.message))
+
+
+def send_email(to_addr: str, subject: str, body_html: str) -> EmailResult:
+    """Send an HTML email with dual-protocol fallback (Port 587 STARTTLS / Port 465 SSL)."""
     try:
         smtp_email, smtp_password = load_smtp_config()
-        if not smtp_email or smtp_email == "your_email@gmail.com":
-            print("[EMAIL] SMTP email not configured. Simulated mode.")
-            return False
+        if not smtp_email or smtp_email == "your_email@gmail.com" or not smtp_password:
+            msg = "SMTP not configured. Running in simulated fallback mode."
+            print(f"[EMAIL] {msg}")
+            return EmailResult(False, msg)
 
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
@@ -141,15 +162,44 @@ def send_email(to_addr: str, subject: str, body_html: str) -> bool:
         msg["To"] = to_addr
         msg.attach(MIMEText(body_html, "html"))
 
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
-            server.ehlo()
-            server.starttls()
-            server.login(smtp_email, smtp_password)
-            server.sendmail(smtp_email, to_addr, msg.as_string())
-        return True
+        err_details = []
+
+        # Strategy 1: Try Port 587 STARTTLS
+        try:
+            with smtplib.SMTP(SMTP_SERVER, 587, timeout=10) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(smtp_email, smtp_password)
+                server.sendmail(smtp_email, to_addr, msg.as_string())
+            print(f"[EMAIL SUCCESS] Sent to {to_addr} via port 587")
+            return EmailResult(True, "Email delivered successfully via SMTP (587 TLS).")
+        except Exception as e587:
+            err_details.append(f"Port 587: {e587}")
+
+        # Strategy 2: Fallback to Port 465 SSL
+        try:
+            with smtplib.SMTP_SSL(SMTP_SERVER, 465, timeout=10) as server:
+                server.login(smtp_email, smtp_password)
+                server.sendmail(smtp_email, to_addr, msg.as_string())
+            print(f"[EMAIL SUCCESS] Sent to {to_addr} via port 465")
+            return EmailResult(True, "Email delivered successfully via SMTP (465 SSL).")
+        except Exception as e465:
+            err_details.append(f"Port 465: {e465}")
+
+        raw_err = " | ".join(err_details)
+        if "535" in raw_err or "BadCredentials" in raw_err or "Username and Password not accepted" in raw_err:
+            clean_err = "Google rejected credentials (535 Bad Credentials). Ensure 2-Step Verification is active and generate an App Password at https://myaccount.google.com/apppasswords."
+        elif "timed out" in raw_err.lower():
+            clean_err = "SMTP connection timed out. (Port 587/465 outbound traffic might be throttled or blocked by serverless host)."
+        else:
+            clean_err = f"SMTP error: {raw_err}"
+
+        print(f"[EMAIL ERROR] {clean_err}")
+        return EmailResult(False, clean_err)
     except Exception as e:
-        print(f"[EMAIL ERROR] {e}")
-        return False
+        print(f"[EMAIL ERROR UNCAUGHT] {e}")
+        return EmailResult(False, str(e))
 
 
 # ------------------------------------------------------------------ #
@@ -194,7 +244,8 @@ def vote():
     user = find_user(session["aadhaar"])
     if user and user.get("voted"):
         return render_template("vote.html", already_voted=True, user=user)
-    return render_template("vote.html", user=user, already_voted=False)
+    session_key = session.get("private_key", "")
+    return render_template("vote.html", user=user, already_voted=False, session_key=session_key)
 
 
 @app.route("/results")
@@ -265,8 +316,8 @@ def zkp():
 
 @app.route("/api/send_otp", methods=["POST"])
 def api_send_otp():
-    """Generate and (optionally) email an OTP. Stores OTP in session."""
-    data = request.get_json()
+    """Generate and (optionally) email an OTP. Stores OTP in session. Provides demo fallback."""
+    data = request.get_json() or {}
     email = data.get("email", "").strip()
     aadhaar = data.get("aadhaar", "").strip()
 
@@ -304,19 +355,30 @@ def api_send_otp():
     </div>
     """
 
-    success = send_email(email, "Your E-Voting OTP", body)
-    return jsonify(
-        {
-            "success": True,
-            "message": "OTP sent to your email."
-        }
-    )
+    res = send_email(email, "Your E-Voting OTP", body)
+    if res.success:
+        return jsonify(
+            {
+                "success": True,
+                "email_sent": True,
+                "message": "OTP sent to your email.",
+            }
+        )
+    else:
+        return jsonify(
+            {
+                "success": True,
+                "email_sent": False,
+                "demo_otp": otp,
+                "message": res.message,
+            }
+        )
 
 
 @app.route("/api/verify_otp", methods=["POST"])
 def api_verify_otp():
     """Verify the OTP entered by user."""
-    data = request.get_json()
+    data = request.get_json() or {}
     entered = data.get("otp", "").strip()
 
     stored_otp = session.get("otp")
@@ -333,11 +395,11 @@ def api_verify_otp():
 
 @app.route("/api/send_private_key", methods=["POST"])
 def api_send_private_key():
-    """Generate private key and send to user email."""
+    """Generate private key and send to user email, with fallback if SMTP fails."""
     if not session.get("otp_verified"):
         return jsonify({"success": False, "message": "Email not verified."})
 
-    data = request.get_json()
+    data = request.get_json() or {}
     email = data.get("email", session.get("otp_email", ""))
 
     keypair = generate_rsa_keypair(128)
@@ -377,11 +439,13 @@ def api_send_private_key():
     </div>
     """
 
-    send_email(email, "Your Voting Private Key", body)
+    res = send_email(email, "Your Voting Private Key", body)
     return jsonify(
         {
             "success": True,
-            "message": "Private key sent to your email."
+            "email_sent": res.success,
+            "private_key": private_key if not res.success else None,
+            "message": "Private key sent to your email." if res.success else res.message,
         }
     )
 
@@ -504,9 +568,9 @@ def api_chain_status():
 @app.route("/api/save_smtp", methods=["POST"])
 def api_save_smtp():
     """Save SMTP credentials dynamically."""
-    data = request.get_json()
+    data = request.get_json() or {}
     email = data.get("email", "").strip()
-    password = data.get("password", "").strip()
+    password = data.get("password", "").replace(" ", "").strip()
     
     if not email or not password:
         return jsonify({"success": False, "message": "Email and App Password are required"})
@@ -517,14 +581,55 @@ def api_save_smtp():
         return jsonify({"success": False, "message": "Failed to save SMTP credentials"})
 
 
+@app.route("/api/test_smtp", methods=["POST"])
+def api_test_smtp():
+    """Test SMTP connection and credentials without modifying state."""
+    data = request.get_json() or {}
+    email = data.get("email", "").strip()
+    password = data.get("password", "").replace(" ", "").strip()
+
+    if not email or not password:
+        # Fallback to current configured credentials
+        email, password = load_smtp_config()
+
+    if not email or not password or email == "your_email@gmail.com":
+        return jsonify({"success": False, "message": "Missing email or app password to test."})
+
+    # Test port 587 first
+    try:
+        with smtplib.SMTP(SMTP_SERVER, 587, timeout=10) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(email, password)
+        return jsonify({"success": True, "message": f"SMTP Authentication Successful (Port 587 TLS) for {email}!"})
+    except Exception as e587:
+        # Try port 465
+        try:
+            with smtplib.SMTP_SSL(SMTP_SERVER, 465, timeout=10) as server:
+                server.login(email, password)
+            return jsonify({"success": True, "message": f"SMTP Authentication Successful (Port 465 SSL) for {email}!"})
+        except Exception as e465:
+            raw_err = f"587: {e587} | 465: {e465}"
+            if "535" in raw_err or "BadCredentials" in raw_err or "Username and Password not accepted" in raw_err:
+                msg = "Google rejected credentials (535 Bad Credentials). Ensure 2-Step Verification is ON and generate a fresh 16-character App Password at https://myaccount.google.com/apppasswords"
+            elif "timed out" in raw_err.lower():
+                msg = "SMTP connection timed out. (Port 587/465 outbound traffic might be throttled or blocked by serverless host)."
+            else:
+                msg = f"Connection failed: {raw_err}"
+            return jsonify({"success": False, "message": msg})
+
+
 @app.route("/api/admin_reset_otp", methods=["POST"])
 def api_admin_reset_otp():
     """Send an OTP to the authorized admin email for system reset."""
-    data = request.get_json()
+    data = request.get_json() or {}
     email = data.get("email", "").strip()
     
-    if email != "minerminer11110@gmail.com":
-        return jsonify({"success": False, "message": "Unauthorized email. Reset denied."})
+    admin_email, _ = load_smtp_config()
+    allowed_admins = ["minerminer11110@gmail.com", admin_email]
+    if email not in allowed_admins:
+        return jsonify({"success": False, "message": f"Unauthorized email. Authorized admin is: {admin_email}"})
         
     otp = str(random.randint(100000, 999999))
     session["admin_reset_otp"] = otp
@@ -545,10 +650,15 @@ def api_admin_reset_otp():
     </div>
     """
     
-    if send_email(email, "🚨 EMERGENCY RESET OTP", body):
-        return jsonify({"success": True, "message": "Emergency reset OTP sent."})
+    res = send_email(email, "🚨 EMERGENCY RESET OTP", body)
+    if res.success:
+        return jsonify({"success": True, "message": "Emergency reset OTP sent to your email."})
     else:
-        return jsonify({"success": False, "message": "Failed to send OTP via SMTP."})
+        return jsonify({
+            "success": True,
+            "demo_otp": otp,
+            "message": f"SMTP delivery failed ({res.message}). For testing, your reset OTP is {otp}"
+        })
 
 
 @app.route("/api/reset_system_secure", methods=["POST"])

@@ -166,10 +166,18 @@
 
     <!-- Private Key -->
     <div class="key-section">
-      <h4>🔑 Enter Private Key</h4>
-      <p>Enter the private key that was sent to your registered email address.</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.4rem;">
+        <h4 style="margin-bottom:0;">🔑 Enter Private Key</h4>
+        {% if session_key %}
+        <button type="button" class="btn btn-outline" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="pasteSessionKey()">
+          📋 Auto-Fill Generated Key
+        </button>
+        {% endif %}
+      </div>
+      <p>Enter the private key that was sent to your registered email address (or auto-filled from session).</p>
       <input type="text" id="privateKey" class="form-control key-input"
         placeholder="ENTER PRIVATE KEY" autocomplete="off"
+        value="{{ session_key }}"
         oninput="this.value=this.value.toUpperCase()"/>
     </div>
 
@@ -206,6 +214,11 @@
 {% block extra_js %}
 <script>
   let selectedParty = null;
+
+  function pasteSessionKey(){
+    const input = document.getElementById('privateKey');
+    input.value = "{{ session_key }}";
+  }
 
   function selectParty(card, party){
     document.querySelectorAll('.party-card').forEach(c=>c.classList.remove('selected'));

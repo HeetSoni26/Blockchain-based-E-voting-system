@@ -266,7 +266,18 @@
   <!-- OTP Section -->
   <div class="otp-section" id="otpSection">
     <h4 style="font-family:'Rajdhani',sans-serif;margin-bottom:.5rem;color:#fff;font-size:1.1rem">Enter OTP</h4>
-    <p style="color:var(--text2);font-size:.88rem">Enter the 6-digit OTP sent to your email.</p>
+    <p style="color:var(--text2);font-size:.88rem" id="otpInstructions">Enter the 6-digit OTP sent to your email.</p>
+
+    <!-- Demo / Fallback Notice -->
+    <div id="demoOtpAlert" style="display:none;background:rgba(255,107,53,0.12);border:1px solid var(--accent3);padding:0.9rem;border-radius:8px;margin:1rem 0;font-size:0.86rem;line-height:1.4;">
+      <div style="font-weight:700;color:var(--accent3);margin-bottom:0.3rem;">⚠️ SMTP Email Notice:</div>
+      <div id="demoOtpMsg" style="color:var(--text2);margin-bottom:0.5rem;"></div>
+      <div style="background:#0d1530;padding:0.6rem 0.8rem;border-radius:6px;border:1px solid #1a3050;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+        <span>Demo Fallback OTP: <strong id="demoOtpValue" style="color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:1.15rem;letter-spacing:2px;"></strong></span>
+        <button type="button" class="btn btn-outline" style="padding:0.25rem 0.6rem;font-size:0.75rem;" onclick="applyDemoOtp()">Auto-Fill OTP</button>
+      </div>
+    </div>
+
     <div class="otp-inputs">
       <input type="tel" maxlength="1" class="otp-digit" id="o1" oninput="otpMove(this,'o2')"/>
       <input type="tel" maxlength="1" class="otp-digit" id="o2" oninput="otpMove(this,'o3')"/>
@@ -306,6 +317,7 @@
   }
 
   let otpSent = false;
+  window.currentDemoOtp = '';
 
   async function sendOTP(){
     const email = document.getElementById('userEmail').value;
@@ -347,9 +359,26 @@
     if(d.success){
       document.getElementById('otpSection').classList.add('show');
       otpSent = true;
+      if(d.email_sent === false && d.demo_otp){
+        document.getElementById('demoOtpAlert').style.display = 'block';
+        document.getElementById('demoOtpMsg').textContent = d.message || 'SMTP email could not be delivered.';
+        document.getElementById('demoOtpValue').textContent = d.demo_otp;
+        window.currentDemoOtp = d.demo_otp;
+      } else {
+        document.getElementById('demoOtpAlert').style.display = 'none';
+      }
     } else {
       alert('Error: ' + d.message);
     }
+  }
+
+  function applyDemoOtp(){
+    if(!window.currentDemoOtp) return;
+    const digits = window.currentDemoOtp.split('');
+    digits.forEach((digit, idx) => {
+      const el = document.getElementById('o' + (idx + 1));
+      if(el) el.value = digit;
+    });
   }
 
   function otpMove(el, nextId){
@@ -390,9 +419,13 @@
     const d = await r.json();
 
     if(d.success){
-      // Show overlay then redirect
-      showModal('Private Key Sent! 🔑', 'Your voting private key has been sent to your verified email. Please check your inbox.');
-      setTimeout(()=>{ window.location.href='/vote'; }, 3000);
+      if(d.email_sent === false && d.private_key){
+        showModal('Voting Key Generated 🔑', 'SMTP email failed to deliver (' + d.message + '). Your RSA Private Key is: ' + d.private_key + ' (Saved in session for auto-fill on the voting page). Redirecting to voting booth...');
+        setTimeout(()=>{ window.location.href='/vote'; }, 5000);
+      } else {
+        showModal('Private Key Sent! 🔑', 'Your voting private key has been sent to your verified email. Please check your inbox.');
+        setTimeout(()=>{ window.location.href='/vote'; }, 3000);
+      }
     } else {
       btn.disabled = false;
       btn.textContent = '🗳️ Vote Now';

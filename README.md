@@ -1,110 +1,152 @@
-# 🗳️ Blockchain E-Voting System
+# 🗳️ BlockVote — Cryptographic Blockchain E-Voting System
 
-A secure digital voting simulation built with Python Flask and a custom SHA-256 blockchain.
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://blockchain-based-e-voting-system-61.vercel.app)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-3.0%2B-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
-## 🚀 Quick Start
+A verifiable, decentralized digital voting platform engineered with **custom SHA-256 blockchain architecture**, **Proof-of-Work (PoW) consensus**, **Merkle Tree transaction integrity**, **Asymmetric RSA ballot signing**, and **Zero-Knowledge identity protection**.
 
-### 1. Install dependencies
-```bash
-pip install flask
+🌐 **Production Deployment:** [https://blockchain-based-e-voting-system-61.vercel.app](https://blockchain-based-e-voting-system-61.vercel.app)
+
+---
+
+## 📌 Architectural Overview
+
+Traditional electoral architectures suffer from central points of failure, lack of independent voter auditability, and vulnerability to retroactive database tampering. **BlockVote** models a cryptographically verifiable alternative:
+
+```mermaid
+flowchart TD
+    A[Voter Identification via Aadhaar] --> B[Biometric Simulation & 2FA OTP]
+    B --> C[Asymmetric RSA Keypair Generation]
+    C --> D[Ballot Selection & SHA-256 Hashing]
+    D --> E[Ballot Signed with Private Key]
+    E --> F[Zero-Knowledge Aadhaar Hashing]
+    F --> G[Transaction Pool / Mempool]
+    G --> H[Proof-of-Work Mining: Difficulty 4]
+    H --> I[Block Merkle Root Calculation]
+    I --> J[Chained into Immutable Distributed Ledger]
+    J --> K[Real-time Cryptographic Receipt & Audit Verification]
 ```
 
-### 2. Run the project
+### 🔒 Core Security & Cryptographic Pillars
+
+* **SHA-256 Immutable Ledger**: Every block contains the hash of the preceding block header. Modifying a historical block invalidates all forward hashes across the chain.
+* **Proof-of-Work Consensus**: Block finality requires discovering a mathematical `nonce` resulting in a block hash starting with `0000` (`DIFFICULTY = 4`).
+* **Merkle Root Validation**: Transaction batches are pairwise-hashed up to a single Merkle Root per block, enabling logarithmic verification speed.
+* **Pure-Python Asymmetric RSA Signing**: Voters are issued ephemeral RSA keypairs. Ballots are cryptographically signed with the voter's private key and mathematically validated against public keys before block inclusion.
+* **Zero-Knowledge Voter Privacy**: Plaintext Aadhaar identities are never committed to blocks; only salted SHA-256 hash digests (`aadhaar_hash`) persist on-chain.
+* **Self-Healing & Attack Simulation**: Built-in security testing tools allow deliberate payload tampering of mined blocks to illustrate real-time validation breakdowns and automatic ledger restoration from backups.
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technologies |
+| :--- | :--- |
+| **Backend** | Python 3.10+, Flask, Jinja2 |
+| **Cryptography** | SHA-256 (`hashlib`), Custom RSA Keypair & Signature Engine, Merkle Trees |
+| **Frontend** | Vanilla JavaScript (ES6+), Glassmorphism CSS, Chart.js, Canvas Particles |
+| **Email & Delivery** | Python `smtplib` (Dual-protocol: Port 587 STARTTLS / Port 465 SSL) + Automatic Demo Fallbacks |
+| **Deployment** | Vercel Serverless (`@vercel/python`) |
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+* Python `3.9+`
+* `pip`
+
+### 1. Clone & Set Up
+
 ```bash
-cd evoting
+git clone https://github.com/HeetSoni26/Blockchain-based-E-voting-system.git
+cd Blockchain-based-E-voting-system
+```
+
+### 2. Environment Configuration (Optional for Live SMTP)
+
+Create a `.env` file in the root directory (or configure environment variables in your deployment host):
+
+```env
+# Optional: Live Gmail SMTP Configuration
+SMTP_EMAIL=your_email@gmail.com
+SMTP_PASSWORD=your_16_character_app_password
+SECRET_KEY=your_custom_flask_secret_key
+```
+
+> **Note on Resilient Fallback Mode:**  
+> If SMTP credentials are not configured or email delivery is restricted, BlockVote automatically switches to **Resilient Demo Mode** — presenting OTPs and RSA private keys directly in the UI so user testing and end-to-end evaluation are never interrupted.
+
+### 3. Install & Run Locally
+
+```bash
+pip install -r requirements.txt
 python app.py
 ```
 
-### 3. Open browser
-```
-http://localhost:5000
-```
+Visit `http://127.0.0.1:5000` in your web browser.
 
 ---
 
-## 🔐 Demo Aadhaar Numbers
+## 🔐 Mock Voter Credentials
 
-| Aadhaar | Name |
-|---------|------|
-| 1234 5678 9012 | Arjun Sharma |
-| 2345 6789 0123 | Priya Patel |
-| 3456 7890 1234 | Rahul Verma |
-| 4567 8901 2345 | Sunita Reddy |
-| 5678 9012 3456 | Amit Kumar |
-| 6789 0123 4567 | Deepika Singh |
-| 7890 1234 5678 | Vikram Nair |
-| 8901 2345 6789 | Kavya Joshi |
-| 9012 3456 7890 | Suresh Gupta |
-| 0123 4567 8901 | Meera Iyer |
+For demonstration, the system includes 10 pre-configured identity records:
 
----
-
-## 📧 Email Configuration (Optional)
-
-To enable real OTP and private key emails, set environment variables:
-
-```bash
-export SMTP_EMAIL="your_gmail@gmail.com"
-export SMTP_PASSWORD="your_app_password"   # Gmail App Password
-python app.py
-```
-
-> Note: For demo purposes, OTP and private key are shown directly in the UI.
+| Aadhaar Number | Voter Name | Regional Constituency |
+| :--- | :--- | :--- |
+| `1234 5678 9012` | Arjun Sharma | New Delhi |
+| `2345 6789 0123` | Priya Patel | Ahmedabad, Gujarat |
+| `3456 7890 1234` | Rahul Verma | Mumbai, Maharashtra |
+| `4567 8901 2345` | Sunita Reddy | Hyderabad, Telangana |
+| `5678 9012 3456` | Amit Kumar | Kolkata, West Bengal |
+| `6789 0123 4567` | Deepika Singh | Chennai, Tamil Nadu |
+| `7890 1234 5678` | Vikram Nair | Kochi, Kerala |
+| `8901 2345 6789` | Kavya Joshi | Pune, Maharashtra |
+| `9012 3456 7890` | Suresh Gupta | Jaipur, Rajasthan |
+| `0123 4567 8901` | Meera Iyer | Bengaluru, Karnataka |
 
 ---
 
-## 🏗️ Project Structure
+## 📋 Comprehensive Voting & Verification Flow
 
-```
-evoting/
-├── app.py           # Flask backend & API routes
-├── blockchain.py    # Custom SHA-256 blockchain
-├── users.json       # 10 dummy Aadhaar users
-├── requirements.txt
-├── templates/
-│   ├── base.html        # Dark cyberpunk base layout + nav
-│   ├── index.html       # Dashboard home page
-│   ├── verify.html      # Aadhaar auth + OTP + Aadhaar card UI
-│   ├── vote.html        # Party selection + vote confirmation
-│   ├── results.html     # Vote count results
-│   ├── mining.html      # Block mining with animation
-│   └── blockchain.html  # Full blockchain explorer
-└── static/
-    ├── css/
-    ├── js/
-    └── images/
-```
+1. **Authentication (`/verify`)**: Enter a registered Aadhaar number. Complete the simulated biometric scanner (retina & fingerprint matching).
+2. **2FA OTP Issuance**: An OTP is dispatched via SMTP (or fallback display). Entering the 6-digit code verifies voter session authenticity.
+3. **Key Generation**: The system generates a cryptographic 128-bit RSA keypair, providing the voter with their private key.
+4. **Cast Ballot (`/vote`)**: Select a candidate/party (`BJP`, `Congress`, `AAP`, `NOTA`, `Independent`). Confirm and cryptographically sign the ballot with your private key.
+5. **Mining & Consensus (`/mining`)**: Pending vote transactions are packed into a block and mined via Proof-of-Work.
+6. **Audit & Verification (`/audit`)**: Input your unique **Ballot Hash** or **Digital Signature** to verify that your vote remains untampered in the public ledger.
 
 ---
 
-## ⛓️ Blockchain Features
+## 🛡️ Administrative & Attack Simulation Suite (`/admin`)
 
-- **Custom SHA-256 blockchain** in Python
-- **Proof-of-Work mining** (4 leading zeros required)
-- **Merkle Root** generation from transactions
-- **Chain validation** on every page load
-- **Cryptographic ballot hashing** and pure-Python RSA asymmetric signing
-- **Zero-Knowledge Proof (ZKP) Simulator** for voter age verification
-- **Live P2P Network Polling** to auto-sync blocks across clients
-- **Regional Analytics Dashboard** mapping vote turnout by state
-- **Professional PDF Receipts** with scannable QR Codes for mathematical vote auditing
-- **Futuristic Biometric Auth Simulation** (retina/fingerprint styling)
-- **Secure Admin Panel** protected by verified OTP for ledger resets
+The system provides an administrative control center for research and demonstrations:
+
+* **Cyber-Security Tamper Simulator**: Manually alter candidate votes within committed blocks to simulate database corruption or malicious administrator attacks. Observe real-time chain invalidation.
+* **Self-Healing Ledger Recovery**: Restore ledger integrity from secure cryptographic backups with one click.
+* **SMTP Diagnostic & Testing Utility**: Test SMTP connections live (STARTTLS/SSL) with detailed server error reporting (including `535 Bad Credentials` diagnostics).
+* **Emergency Ledger Reset**: Secure, OTP-gated wipe of experimental blocks to reset the voting environment.
 
 ---
 
-## ⚠️ Disclaimer
+## ☁️ Deploying to Vercel
 
-This is an **educational simulation only** — not for use in real elections.
+The project includes pre-configured [`vercel.json`](./vercel.json) build specifications:
+
+1. Push your fork or repository to GitHub.
+2. Import the project into your [Vercel Dashboard](https://vercel.com).
+3. Under **Project Settings → Environment Variables**, add:
+   * `SMTP_EMAIL`: Your Gmail address.
+   * `SMTP_PASSWORD`: Your 16-character [Google App Password](https://myaccount.google.com/apppasswords).
+   * `SECRET_KEY`: A random secure string.
+4. Click **Deploy**.
 
 ---
 
-## 🏆 GitHub Badges
+## 📄 License & Disclaimer
 
-This repository is also used for earning GitHub achievement badges.
-
-### Badges Being Earned
-- Quickdraw ✅
-- Pull Shark ✅
-- Pair Extraordinaire ✅
-- YOLO (in progress)
+* **License**: Released under the [MIT License](LICENSE).
+* **Educational Disclaimer**: This system is designed for **academic research, educational demonstrations, and hackathon evaluation**. It is not intended for official government or municipal elections without integration with certified hardware security modules (HSM) and regulated multi-party consensus nodes.
